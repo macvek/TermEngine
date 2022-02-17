@@ -11,6 +11,10 @@ var term = {
     LIGHTGRAY   : 37,        WHITE       :97
 };
 
+var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
+    term.LIGHTGREEN, term.YELLOW, term.LIGHTYELLOW, term.BLUE, term.LIGHTBLUE, 
+    term.MAGENTA, term.LIGHTMAGENTA, term.CYAN, term.LIGHTCYAN, term.LIGHTGRAY, term.WHITE];
+
 var ansiToCSS = {};
 (function() {
     var a = ansiToCSS;
@@ -38,7 +42,72 @@ function start() {
     TermFlush(handler, buffer);
     TermCursorTo(cursor, handler, buffer, 1,1);
     TermBlink(cursor, 500);
+
+    var t = TermPack(buffer, handler, cursor);
+    
+    var chars = stringToArr("0123456789");
+    
+    var flips = [
+        "Good morning my fellow citizens\nToday is your lucky day",
+        "00000000000000000000000000000000000000111111111111111111111111111111111111111112222222222222222222222222222222223333333333333333333333333333333",
+        "ROUND AND ROUND",
+        "ENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\n",
+        "EXITS^"
+        
+
+    ]
+
+    setInterval( function() {
+        t.Print(randomOf(flips), [randomColor(), randomColor()]);
+    },100);
+    
+
+
+
+    
 }
+
+function TermPack(buffer, handler, cursor) {
+    var cursorPos = [1,1];
+    return {
+        Print: Print
+    }
+
+
+    function Print(text, optionalColor=[]) {
+        var lastTail = 0;
+        for (var i=0; i<text.length; i++) {
+            var newLine = ( text.charAt(i) === '\n' );
+            var endOfLine = cursorPos[0] + i - lastTail == 80;
+            
+            if (newLine || endOfLine) {
+                var renderCurrentChar = (endOfLine ? 1:0);
+                var toRender = text.substr(lastTail, i-lastTail + renderCurrentChar );
+                lastTail = i+1;
+                
+                TermWrite(buffer, cursorPos[0], cursorPos[1], toRender, optionalColor);
+
+                if (cursorPos[1] == 24) {
+                    consoleBufferRotate(buffer);
+                }
+                else {
+                    ++cursorPos[1];
+                }
+                cursorPos[0] = 1;
+            }
+        }
+
+        if (lastTail < text.length) {
+            var trailingText = text.substr(lastTail);
+            TermWrite(buffer, cursorPos[0], cursorPos[1], trailingText, optionalColor);
+            cursorPos[0] += trailingText.length;
+        }
+
+        TermFlush(handler, buffer);
+        TermCursorTo(cursor, handler, buffer, cursorPos[0], cursorPos[1]);
+    }
+}
+
 
 function TermWrite(buffer,iX,iY,text, textColors=[]) {
     var x = iX -1;
@@ -63,7 +132,6 @@ function TermWrite(buffer,iX,iY,text, textColors=[]) {
             colorLine[i][1] = textColors[1];
         }
     }
-  
 }
 
 function TermFlush(handler, buffer) {
@@ -79,7 +147,9 @@ function TermFlush(handler, buffer) {
     }
 }
 
-function TermCursorTo(cursor, handler, buffer, x,y) {
+function TermCursorTo(cursor, handler, buffer, aX,aY) {
+    var x = aX-1;
+    var y = aY-1;
     var charBox = handler[y][x];
     var rect = charBox.getBoundingClientRect();
     
@@ -116,11 +186,20 @@ function cssClassNameFromAnsii(frontAndBackColor) {
 }
 
 function randomColor() {
-    var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
-        term.LIGHTGREEN, term.YELLOW, term.LIGHTYELLOW, term.BLUE, term.LIGHTBLUE, 
-        term.MAGENTA, term.LIGHTMAGENTA, term.CYAN, term.LIGHTCYAN, term.LIGHTGRAY, term.WHITE];
+    return randomOf(colors);
+}
 
-    return colors[Math.floor(Math.random()*colors.length)];
+function randomOf(arr) {
+    return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function stringToArr(src) {
+    var arr = [];
+    for (var i=0;i<src.length;i++) {
+        arr.push(src.charAt(i));
+    }
+
+    return arr;
 }
 
 function build80x24CharacterMap() {
@@ -177,16 +256,34 @@ function consoleBuffer() {
     var colors = [];
 
     for (var y=0;y<24;y++) {
-        var line = [];
-        var colorLine = [];
-        for (var x=0;x<80;x++) {
-            line.push(' ');
-            colorLine.push([term.WHITE,term.BLACK]);
-        }
-        characters.push(line);
-        colors.push(colorLine);
+        var linePair = consoleBufferLine();
+        characters.push(linePair[0]);
+        colors.push(linePair[1]);
     }
 
     return {chars: characters, colors:colors}
+}
+
+function consoleBufferRotate(buffer) {
+    var chars = buffer.chars;
+    var colors = buffer.colors;
+
+    chars.splice(0, 1);
+    colors.splice(0, 1);
+
+    var linePair = consoleBufferLine();
+    chars.push(linePair[0]);
+    colors.push(linePair[1]);
+}
+
+function consoleBufferLine() {
+    var line = [];
+    var colorLine = [];
+    for (var x=0;x<80;x++) {
+        line.push(' ');
+        colorLine.push([term.WHITE,term.BLACK]);
+    }
+
+    return [line, colorLine]
 }
 
