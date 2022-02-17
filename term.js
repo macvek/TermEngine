@@ -51,21 +51,169 @@ function start() {
     t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
     t.Print("#>");
     t.Flush();
-    console.log(t.GetCharXY(1,1));
-    console.log(t.GetColorXY(1,1));
+
+    function readLine() {
+        var echo = new Echo(t, c => {
+            t.Println(c);
+            t.Println("GOT: "+c);
+            t.Print("#>");
+            readLine();
+        });
+        echo.Start();
+    }
+
+    readLine();
+
+}
+
+function Echo(termPack, onInput, onChange) {
+    var startPos = [];
+    var content = "";
+    var editorCursor = 0;
+
+    return {
+        Start:Start,
+        Stop:Stop,
+        Reset:Reset,
+        GetContent:GetContent,
+        SetContent:SetContent
+    }
+    
+    function Start() {
+        Reset();
+        captureInput();
+    }
+
+    function Stop() {
+        startPos = null;
+        freeInput();
+    }
+
+    function Reset() {
+        startPos = termPack.GetCursorXY();
+        SetContent("");
+    }
+
+    function GetContent() {
+        return content;
+    }
+
+    function SetContent(newContent) {
+        content = newContent;
+        redraw();
+    }
+
+    function onKeyDown(e) {
+        if (canAccept(e)) {
+            putToContent(e.key);
+            if (onChange) onChange(content, e);
+            redraw();
+        }
+        else if (e.key == 'Enter') {
+            termPack.SetCursorXY(startPos[0], startPos[1]);
+            termPack.Print(spacesOnly(content.length));
+            termPack.SetCursorXY(startPos[0], startPos[1]);
+            onInput(content);
+            Stop();
+        }
+        else if (canEdit(e.key)) {
+            var blanks = content.length;
+            performEdit(e.key);
+            redraw(blanks);
+        }
+        else if (canMove(e.key)) {
+            performMove(e.key);
+            redraw();
+        }
+    }
+
+    function putToContent(chr) {
+        var before = content.substring(0, editorCursor);
+        var after = content.substring(editorCursor);
+        content = before + chr + after;
+        ++editorCursor;
+    }
+
+    function canMove(keyName) {
+        return ["Home", "End", "ArrowLeft", "ArrowRight"].indexOf(keyName) != -1;
+    }
+
+    function performMove(keyName) {
+        if ("ArrowLeft" === keyName) {
+            --editorCursor;
+        }
+        else if ("ArrowRight" === keyName) {
+            ++editorCursor;
+        }
+        else if ("Home" === keyName) {
+            editorCursor = 0;
+        }
+        else if ("End" === keyName) {
+            editorCursor = content.length;
+        }
+
+        editorCursor = Math.max(0, Math.min(editorCursor, content.length));
+
+    }
+
+    function canAccept(keyEvent) {
+        return !keyEvent.altKey && !keyEvent.ctrlKey && keyEvent.key.length == 1
+    }
+
+    function canEdit(keyName) {
+        return ["Backspace","Delete"].indexOf(keyName) != -1;
+    }
+
+    function performEdit(keyName) {
+        var callDelete = ( "Delete" === keyName );
+        if ("Backspace" === keyName && editorCursor > 0) {
+            --editorCursor;
+            callDelete = true;
+        }
+
+        if (callDelete) {
+            var before = content.substring(0, editorCursor);
+            var after = content.substring(editorCursor+1);
+            content = before + after;
+        }
+    }
+
+    function redraw(blanks=0) {
+        termPack.SetCursorXY(startPos[0], startPos[1]);
+        termPack.HoldFlush();
+        if (blanks > 0) {
+            termPack.Print(spacesOnly(blanks));
+            termPack.SetCursorXY(startPos[0], startPos[1]);
+        }
+        var beforeCursor = content.substring(0, editorCursor);
+        var afterCursor = content.substring(editorCursor);
+        termPack.Print(beforeCursor);
+        var cursorPos = termPack.GetCursorXY();
+        termPack.Print(afterCursor);
+        termPack.SetCursorXY(cursorPos[0], cursorPos[1]);
+        termPack.Flush();
+    }
+
+    function captureInput() {
+        window.addEventListener('keydown', onKeyDown);
+    }
+
+    function freeInput() {
+        window.removeEventListener('keydown', onKeyDown);
+    }
 }
 
 function TermPack(buffer, handler, cursor) {
     var cursorPos = [1,1];
     var useFlush = true;
     return {
-        Print: Print, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, SetCursorXY: SetCursorXY, GetCharXY,
-        GetColorXY, Flush: Flush,
+        Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
+        SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
     }
 
     function SetCursorXY(x,y) {
         var nX = Math.max(1,Math.min(80,x));
-        var nY = Math.max(1,Math.min(24,x));
+        var nY = Math.max(1,Math.min(24,y));
         cursorPos = [nX,nY];
     }
 
@@ -85,6 +233,10 @@ function TermPack(buffer, handler, cursor) {
         useFlush = false;
     }
 
+    function Println(text, optionalColor=[]) {
+        return Print(text+"\n", optionalColor);
+    }
+
     function Print(text, optionalColor=[]) {
         var lastTail = 0;
         for (var i=0; i<text.length; i++) {
@@ -93,7 +245,7 @@ function TermPack(buffer, handler, cursor) {
             
             if (newLine || endOfLine) {
                 var renderCurrentChar = (endOfLine ? 1:0);
-                var toRender = text.substr(lastTail, i-lastTail + renderCurrentChar );
+                var toRender = text.substring(lastTail, i + renderCurrentChar );
                 lastTail = i+1;
                 
                 TermWrite(buffer, cursorPos[0], cursorPos[1], toRender, optionalColor);
@@ -109,7 +261,7 @@ function TermPack(buffer, handler, cursor) {
         }
 
         if (lastTail < text.length) {
-            var trailingText = text.substr(lastTail);
+            var trailingText = text.substring(lastTail);
             TermWrite(buffer, cursorPos[0], cursorPos[1], trailingText, optionalColor);
             cursorPos[0] += trailingText.length;
         }
@@ -305,3 +457,11 @@ function consoleBufferLine() {
     return [line, colorLine]
 }
 
+function spacesOnly(n) {
+    var out = "";
+    for (var i=0;i<n;i++) {
+        out+=" ";
+    }
+
+    return out;
+}
