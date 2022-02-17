@@ -45,34 +45,45 @@ function start() {
 
     var t = TermPack(buffer, handler, cursor);
     
-    var chars = stringToArr("0123456789");
-    
-    var flips = [
-        "Good morning my fellow citizens\nToday is your lucky day",
-        "00000000000000000000000000000000000000111111111111111111111111111111111111111112222222222222222222222222222222223333333333333333333333333333333",
-        "ROUND AND ROUND",
-        "ENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\nENTERS!!\n",
-        "EXITS^"
-        
-
-    ]
-
-    setInterval( function() {
-        t.Print(randomOf(flips), [randomColor(), randomColor()]);
-    },100);
-    
-
-
-
-    
+    t.HoldFlush();
+    t.Print("Welcome to ");
+    t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
+    t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
+    t.Print("#>");
+    t.Flush();
+    console.log(t.GetCharXY(1,1));
+    console.log(t.GetColorXY(1,1));
 }
 
 function TermPack(buffer, handler, cursor) {
     var cursorPos = [1,1];
+    var useFlush = true;
     return {
-        Print: Print
+        Print: Print, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, SetCursorXY: SetCursorXY, GetCharXY,
+        GetColorXY, Flush: Flush,
     }
 
+    function SetCursorXY(x,y) {
+        var nX = Math.max(1,Math.min(80,x));
+        var nY = Math.max(1,Math.min(24,x));
+        cursorPos = [nX,nY];
+    }
+
+    function GetCharXY(x,y) {
+        return buffer.chars[y-1][x-1];
+    }
+
+    function GetColorXY(x,y) {
+        return buffer.colors[y-1][x-1];
+    }
+
+    function GetCursorXY() {
+        return [].concat(cursorPos);
+    }
+
+    function HoldFlush() {
+        useFlush = false;
+    }
 
     function Print(text, optionalColor=[]) {
         var lastTail = 0;
@@ -103,6 +114,13 @@ function TermPack(buffer, handler, cursor) {
             cursorPos[0] += trailingText.length;
         }
 
+        if (useFlush) {
+            Flush();
+        }
+    }
+
+    function Flush() {
+        useFlush = true;
         TermFlush(handler, buffer);
         TermCursorTo(cursor, handler, buffer, cursorPos[0], cursorPos[1]);
     }
