@@ -1,4 +1,3 @@
-window.addEventListener('load', start);
 
 var term = {
     BLACK       : 30,        GRAY        :90,
@@ -31,38 +30,14 @@ var ansiToCSS = {};
 
 window.term = term;
 
-function start() {
+function TermStart() {
     build80x24CharacterMap();
     var buffer = consoleBuffer();
     var handler = consoleHandler();
     var cursor = buildCursor();
-
-    TermWrite(buffer, 1,1,"Hello #>");
-    TermWrite(buffer, 1,2,">> Welcome to THEME PARK << ");
-    TermFlush(handler, buffer);
-    TermCursorTo(cursor, handler, buffer, 1,1);
-    TermBlink(cursor, 500);
-
-    var t = TermPack(buffer, handler, cursor);
-    
-    t.HoldFlush();
-    t.Print("Welcome to ");
-    t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
-    t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
-    t.Print("#>");
-    t.Flush();
-
-    function readLine() {
-        var echo = new Echo(t, c => {
-            t.Println(c);
-            t.Println("GOT: "+c);
-            t.Print("#>");
-            readLine();
-        });
-        echo.Start();
-    }
-
-    readLine();
+    var termPack = TermPack(buffer, handler, cursor);
+    TermBlink(cursor, 500, termPack);
+    return termPack;
 
 }
 
@@ -70,6 +45,7 @@ function Echo(termPack, onInput, onChange) {
     var startPos = [];
     var content = "";
     var editorCursor = 0;
+    var cleanupAfterInput;
 
     return {
         Start:Start,
@@ -79,7 +55,8 @@ function Echo(termPack, onInput, onChange) {
         SetContent:SetContent
     }
     
-    function Start() {
+    function Start(aCleanupAfterInput=false) {
+        cleanupAfterInput = aCleanupAfterInput;
         Reset();
         captureInput();
     }
@@ -110,11 +87,7 @@ function Echo(termPack, onInput, onChange) {
             redraw();
         }
         else if (e.key == 'Enter') {
-            termPack.SetCursorXY(startPos[0], startPos[1]);
-            termPack.Print(spacesOnly(content.length));
-            termPack.SetCursorXY(startPos[0], startPos[1]);
-            onInput(content);
-            Stop();
+            onEnter();
         }
         else if (canEdit(e.key)) {
             var blanks = content.length;
@@ -125,6 +98,19 @@ function Echo(termPack, onInput, onChange) {
             performMove(e.key);
             redraw();
         }
+    }
+
+    function onEnter() {
+        if (cleanupAfterInput) {
+            termPack.SetCursorXY(startPos[0], startPos[1]);
+            termPack.Print(spacesOnly(content.length));
+            termPack.SetCursorXY(startPos[0], startPos[1]);
+        }
+        else {
+            termPack.Print("\n");
+        }
+        onInput(content);
+        Stop();
     }
 
     function putToContent(chr) {
@@ -206,9 +192,26 @@ function Echo(termPack, onInput, onChange) {
 function TermPack(buffer, handler, cursor) {
     var cursorPos = [1,1];
     var useFlush = true;
-    return {
+    var self = {
+        cursorHidden: false,
+
+        EmptyBuffer: EmptyBuffer,
         Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
         SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
+        showCursor: showCursor, hideCursor: hideCursor
+    }
+    return self;
+
+    function EmptyBuffer() {
+        buffer = consoleBuffer();
+    }
+
+    function showCursor() {
+        self.cursorHidden = false;
+    }
+
+    function hideCursor() {
+        self.cursorHidden = true;
     }
 
     function SetCursorXY(x,y) {
@@ -340,8 +343,13 @@ function TermCursorTo(cursor, handler, buffer, aX,aY) {
 
 }
 
-function TermBlink(what, delay) {
+function TermBlink(what, delay, termPack) {
     setInterval(function() {
+        if (termPack.cursorHidden) {
+            what.style.visibility = 'hidden';
+            return;
+        }
+
         if (what.style.visibility == 'hidden') {
             what.style.visibility = 'visible';
         }
@@ -361,6 +369,10 @@ function randomColor() {
 
 function randomOf(arr) {
     return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function randomNum(N) {
+    return Math.floor(Math.random()*N);
 }
 
 function stringToArr(src) {
@@ -451,7 +463,7 @@ function consoleBufferLine() {
     var colorLine = [];
     for (var x=0;x<80;x++) {
         line.push(' ');
-        colorLine.push([term.WHITE,term.BLACK]);
+        colorLine.push([term.LIGHTGRAY,term.BLACK]);
     }
 
     return [line, colorLine]
