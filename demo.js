@@ -138,15 +138,39 @@ function demoApp() {
         var mapOffset = [32,8];
         var mapSize = [18,10];
 
+        var fields;
+        var fog;
+
         var termCursorXY = t.GetCursorXY();
         var currentColors = t.GetColorXY(termCursorXY[0], termCursorXY[1]);
 
+        prepareFields();
         redraw();
         window.addEventListener('keydown', onKey);
+
+        function gameLost() {
+            console.log("GAME LOST");
+        }
+
+        function gameWon() {
+            console.log("GAME WON");
+        }
+
+        function onlyMinesHidden() {
+            for (var y=0;y<mapSize[1];y++)
+            for (var x=0;x<mapSize[0];x++) {
+                if (fog[y][x] && fields[y][x] !== '*') {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         function redraw() {
             t.HoldFlush();
             drawMap();
+            drawFields();
             drawCursor();
             t.Flush();
         }
@@ -166,6 +190,24 @@ function demoApp() {
             t.SetCursorXY(31,18);    t.Print("└──────────────────┘", currentColors);
         }
 
+        function drawFields() {
+            var offX = mapOffset[0];
+            var offY = mapOffset[1];
+            
+            for (var y=0;y<mapSize[1];y++)
+            for (var x=0;x<mapSize[0];x++) {
+                var field = fields[y][x];
+                var fogged = fog[y][x];
+                t.SetCursorXY(x+offX,y+offY);
+                if (fogged) {
+                    t.Print('#', [term.GRAY, term.BLACK]);
+                }
+                else {
+                    t.Print(field, [term.GRAY, term.BLACK]);
+                }
+            }
+        }
+
         function drawCursor() {
             var posX = mapOffset[0] + cursorXY[0];
             var posY = mapOffset[1] + cursorXY[1];
@@ -175,6 +217,102 @@ function demoApp() {
             t.Print(chr, [colors[1], colors[0]]);
         }
 
+        function resolveField(x,y) {
+            if (!fog[y][x]) {
+                return;
+            }
+
+            fog[y][x] = false;
+            var field = fields[y][x];
+            if (field === '*') {
+                gameLost();
+            }
+            else if (field === ' ') {
+                var pairs = allNeighbours(x,y);
+                for (var i=0;i<pairs.length;i++) {
+                    var p = pairs[i];
+                    resolveField(p[0], p[1]);
+                }
+            }
+
+            if (onlyMinesHidden()) {
+                gameWon();
+            }
+        }
+
+        function prepareFields() {
+            var mines = 20;
+            fields = [];
+            fog = [];
+            for (var y=0;y<mapSize[1];y++) {
+                fields.push(new Array(mapSize[0]));
+                var fogged = [];
+                fog.push(fogged);
+                for (var x=0;x<mapSize[0];x++) {
+                    fogged.push(true);
+                }
+            }
+
+            var fieldsCount = mapSize[0]*mapSize[1];
+            if (mines >= fieldsCount) {
+                throw "General error; cannot have more mines than all fields!";
+            }
+            var indexes = [];
+            for (var i=0;i<mines;i++) {
+                var idx = randomNum(fieldsCount);
+                while(indexes.indexOf(idx) != -1) {
+                    idx = ( idx + 1 ) % fieldsCount;
+                }
+
+                indexes.push(idx);
+            }
+
+            for (var i=0;i<indexes.length;i++) {
+                var idx = indexes[i];
+                var x = idx % mapSize[0];
+                var y = Math.floor(idx/mapSize[0]);
+                fields[y][x] = '*';
+            }
+
+            for (var y=0;y<mapSize[1];y++)
+            for (var x=0;x<mapSize[0];x++) {
+                calcMinesForField(x,y);
+            }
+        }
+
+        function allNeighbours(x,y) {
+            var pairs = [];
+            for (var nY=y-1;nY<=y+1;nY++)
+            for (var nX=x-1;nX<=x+1;nX++) {
+                if ( !(nY == y && nX == x) && nY >= 0 && nY < mapSize[1] && nX >= 0 && nX < mapSize[0]) {
+                    pairs.push([nX,nY]);
+                }
+            }
+            return pairs;
+        }
+
+        function calcMinesForField(x,y) {
+            if (fields[y][x] === '*') {
+                return;
+            }
+
+            var count = 0;
+            var neighbours = allNeighbours(x,y);
+            for (var i=0;i<neighbours.length;i++) {
+                var nX = neighbours[i][0];
+                var nY = neighbours[i][1];
+                
+                if ( fields[nY][nX] === '*') {
+                    ++count;
+                }
+            }
+
+            var txt = count > 0 ? ''+count : ' ';
+            fields[y][x] = txt;
+            return txt;
+        }
+
+        window.debugIt = calcMinesForField;
         
         function onKey(e) {
             
@@ -185,22 +323,24 @@ function demoApp() {
                 showPrompt();
             }
             
-            var callRedraw = false;
+            var callRedraw = true;
             if ("ArrowDown" === e.key) {
                 ++cursorXY[1];
-                callRedraw = true;
             }
             else if ("ArrowUp" === e.key) {
                 --cursorXY[1];
-                callRedraw = true;
             }
             else if ("ArrowLeft" === e.key) {
                 --cursorXY[0];
-                callRedraw = true;
             }
             else if ("ArrowRight" === e.key) {
                 ++cursorXY[0];
-                callRedraw = true;
+            }
+            else if (" " === e.key) {
+                resolveField(cursorXY[0], cursorXY[1]);
+            }
+            else {
+                callRedraw = false;
             }
 
             if (callRedraw) {
