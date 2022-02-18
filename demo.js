@@ -134,6 +134,8 @@ function demoApp() {
     function minesweeperDemo() {
         t.hideCursor();
 
+        var gameSettled;
+        var gameResult;
         var cursorXY = [0,0];
         var mapOffset = [32,8];
         var mapSize = [18,10];
@@ -144,16 +146,32 @@ function demoApp() {
         var termCursorXY = t.GetCursorXY();
         var currentColors = t.GetColorXY(termCursorXY[0], termCursorXY[1]);
 
-        prepareFields();
-        redraw();
+        resetGame();
         window.addEventListener('keydown', onKey);
 
+        function resetGame() {
+            gameSettled = false;
+            prepareFields();
+            redraw();
+        }
+
         function gameLost() {
-            console.log("GAME LOST");
+            gameSettled = true;
+            gameResult = false;
+            dropFog();
         }
 
         function gameWon() {
-            console.log("GAME WON");
+            gameSettled = true;
+            gameResult = true;
+            dropFog();
+        }
+
+        function dropFog() {
+            for (var y=0;y<mapSize[1];y++) 
+            for (var x=0;x<mapSize[0];x++){
+                fog[y][x] = false;
+            }
         }
 
         function onlyMinesHidden() {
@@ -169,10 +187,36 @@ function demoApp() {
 
         function redraw() {
             t.HoldFlush();
+            drawInfoboard();
             drawMap();
             drawFields();
             drawCursor();
             t.Flush();
+        }
+
+        function drawInfoboard() {
+            var winMessage   = "       VICTOR       ";
+            var lostMessage  = "       LOSSER       ";
+            var noMessage = "                    ";
+
+            var inGameKeys  = "          (ESC) to quit          ";
+            var afterGame   = "(ESC) to quit, (ENTER) to restart";
+
+            var winColor = [term.LIGHTGREEN, term.GREEN];
+            var lostColor = [term.BLACK, term. RED];
+
+            t.SetCursorXY(31, 5);
+            if (gameSettled) {
+                var msg = gameResult ? winMessage : lostMessage;
+                var color = gameResult ? winColor : lostColor;
+                t.Print(msg, color);
+            }            
+            else {
+                t.Print(noMessage, [term.BLACK, term.BLACK]);
+            }
+
+            t.SetCursorXY(24, 22);
+            t.Print(gameSettled ? afterGame : inGameKeys, [term.LIGHTGRAY, term.BLACK])
         }
 
         function drawMap() {
@@ -194,16 +238,45 @@ function demoApp() {
             var offX = mapOffset[0];
             var offY = mapOffset[1];
             
+            var indexes = " 12345678";
+            var colors = 
+                [   [term.WHITE, term.BLACK] // 0 - space
+                    [term.BLUE, term.BLACK], // 1
+                    [term.GREEN, term.BLACK], // 2
+                    [term.CYAN, term.BLACK], // 3
+                    [term.MAGENTA, term.BLACK], // 4
+                    [term.LIGHTBLUE, term.BLACK], // 5
+                    [term.LIGHTGREEN, term.BLACK], // 6
+                    [term.LIGHTCYAN, term.BLACK], // 7
+                    [term.LIGHTMAGENTA, term.BLACK] // 8
+                ];
+            var mineColor = gameResult ? [term.LIGHTGREEN] : [term.LIGHTRED];
+            var grayColor = [term.GRAY, term.BLACK];
+
             for (var y=0;y<mapSize[1];y++)
             for (var x=0;x<mapSize[0];x++) {
                 var field = fields[y][x];
                 var fogged = fog[y][x];
                 t.SetCursorXY(x+offX,y+offY);
                 if (fogged) {
-                    t.Print('#', [term.GRAY, term.BLACK]);
+                    t.Print('#', grayColor);
                 }
                 else {
-                    t.Print(field, [term.GRAY, term.BLACK]);
+                    if (gameSettled) {
+                        if (field === '*') {
+                            t.Print('*', mineColor);
+                        }
+                        else {
+                            t.Print(field, grayColor);
+                        }
+                    }
+                    else {
+                        var colorIdx = indexes.indexOf(field);
+                        if (colorIdx == -1) {
+                            throw "Found not matching index for "+field+" on xy:"+x+","+y;
+                        }
+                        t.Print(field, colors[colorIdx]);
+                    }
                 }
             }
         }
@@ -226,6 +299,7 @@ function demoApp() {
             var field = fields[y][x];
             if (field === '*') {
                 gameLost();
+                return;
             }
             else if (field === ' ') {
                 var pairs = allNeighbours(x,y);
@@ -312,15 +386,16 @@ function demoApp() {
             return txt;
         }
 
-        window.debugIt = calcMinesForField;
-        
         function onKey(e) {
             
-            if ( ["Escape","Enter"].indexOf(e.key) != -1) {
+            if ( ["Escape"].indexOf(e.key) != -1) {
                 window.removeEventListener('keydown', onKey);
                 t.showCursor();
                 clearConsole();
                 showPrompt();
+            }
+            else if ( gameSettled && ["Enter"].indexOf(e.key) != -1) {
+                resetGame();
             }
             
             var callRedraw = true;
@@ -337,7 +412,9 @@ function demoApp() {
                 ++cursorXY[0];
             }
             else if (" " === e.key) {
-                resolveField(cursorXY[0], cursorXY[1]);
+                if (!gameSettled) {
+                    resolveField(cursorXY[0], cursorXY[1]);
+                }
             }
             else {
                 callRedraw = false;
