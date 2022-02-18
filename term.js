@@ -138,7 +138,7 @@ function Echo(termPack, onInput, onChange) {
             editorCursor = content.length;
         }
 
-        editorCursor = Math.max(0, Math.min(editorCursor, content.length));
+        editorCursor = boundIn(0, editorCursor, content.length);
 
     }
 
@@ -208,15 +208,17 @@ function TermPack(buffer, handler, cursor) {
 
     function showCursor() {
         self.cursorHidden = false;
+        TermToggleVisible(cursor, self);
     }
 
     function hideCursor() {
         self.cursorHidden = true;
+        TermToggleVisible(cursor, self);
     }
 
     function SetCursorXY(x,y) {
-        var nX = Math.max(1,Math.min(80,x));
-        var nY = Math.max(1,Math.min(24,y));
+        var nX = boundIn(1, x, 80);
+        var nY = boundIn(1, y, 24);
         cursorPos = [nX,nY];
     }
 
@@ -345,18 +347,22 @@ function TermCursorTo(cursor, handler, buffer, aX,aY) {
 
 function TermBlink(what, delay, termPack) {
     setInterval(function() {
-        if (termPack.cursorHidden) {
-            what.style.visibility = 'hidden';
-            return;
-        }
-
-        if (what.style.visibility == 'hidden') {
-            what.style.visibility = 'visible';
-        }
-        else {
-            what.style.visibility = 'hidden';
-        }
+        TermToggleVisible(what, termPack.cursorHidden);
     }, delay);
+}
+
+function TermToggleVisible(what, forceHidden) {
+    if (forceHidden) {
+        what.style.visibility = 'hidden';
+        return;
+    }
+
+    if (what.style.visibility == 'hidden') {
+        what.style.visibility = 'visible';
+    }
+    else {
+        what.style.visibility = 'hidden';
+    }
 }
 
 function cssClassNameFromAnsii(frontAndBackColor) {
@@ -476,4 +482,8 @@ function spacesOnly(n) {
     }
 
     return out;
+}
+
+function boundIn(min,what,max) {
+    return Math.max(min, Math.min(what, max));
 }

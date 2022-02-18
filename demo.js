@@ -8,12 +8,14 @@ function demoApp() {
     t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
     t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
 
-    showPrompt();
+    //showPrompt();
+    callCommand('minesweeper');
 
     function showPrompt() {
         t.Print("#>");
         t.Flush();
         readLine();
+        
     }
 
     function readLine() {
@@ -35,6 +37,11 @@ function demoApp() {
         else if (cmd === "matrix") {
             clearConsole();
             matrixDemo();
+            return false;
+        }
+        else if (cmd === "minesweeper") {
+            clearConsole();
+            minesweeperDemo();
             return false;
         }
 
@@ -124,10 +131,91 @@ function demoApp() {
 
     }
 
+    function minesweeperDemo() {
+        t.hideCursor();
+
+        var cursorXY = [0,0];
+        var mapOffset = [32,8];
+        var mapSize = [18,10];
+
+        var termCursorXY = t.GetCursorXY();
+        var currentColors = t.GetColorXY(termCursorXY[0], termCursorXY[1]);
+
+        redraw();
+        window.addEventListener('keydown', onKey);
+
+        function redraw() {
+            t.HoldFlush();
+            drawMap();
+            drawCursor();
+            t.Flush();
+        }
+
+        function drawMap() {
+            t.SetCursorXY(31, 7);    t.Print("┌──────────────────┐", currentColors);
+            t.SetCursorXY(31, 8);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31, 9);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,10);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,11);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,12);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,13);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,14);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,15);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,16);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,17);    t.Print("│                  │", currentColors);
+            t.SetCursorXY(31,18);    t.Print("└──────────────────┘", currentColors);
+        }
+
+        function drawCursor() {
+            var posX = mapOffset[0] + cursorXY[0];
+            var posY = mapOffset[1] + cursorXY[1];
+            var colors = t.GetColorXY(posX, posY);
+            var chr = t.GetCharXY(posX, posY);
+            t.SetCursorXY(posX,posY);
+            t.Print(chr, [colors[1], colors[0]]);
+        }
+
+        
+        function onKey(e) {
+            
+            if ( ["Escape","Enter"].indexOf(e.key) != -1) {
+                window.removeEventListener('keydown', onKey);
+                t.showCursor();
+                clearConsole();
+                showPrompt();
+            }
+            
+            var callRedraw = false;
+            if ("ArrowDown" === e.key) {
+                ++cursorXY[1];
+                callRedraw = true;
+            }
+            else if ("ArrowUp" === e.key) {
+                --cursorXY[1];
+                callRedraw = true;
+            }
+            else if ("ArrowLeft" === e.key) {
+                --cursorXY[0];
+                callRedraw = true;
+            }
+            else if ("ArrowRight" === e.key) {
+                ++cursorXY[0];
+                callRedraw = true;
+            }
+
+            if (callRedraw) {
+                cursorXY[0] = boundIn(0, cursorXY[0], mapSize[0]-1);
+                cursorXY[1] = boundIn(0, cursorXY[1], mapSize[1]-1);
+                redraw();
+            }
+        }
+    }
+
     function showHelp() {
         t.Println("##         HELP         ##", [term.WHITE, term.GRAY]);
         t.Println("cls - Clear screen");
         t.Println("matrix - brunette blondes and red");
+        t.Println("minesweeper");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 
