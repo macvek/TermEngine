@@ -11,7 +11,8 @@ function demoApp() {
         clearConsole();
         t.Print("Welcome to ");
         t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
-        t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
+        t.Print(" demo\n");
+        t.Print("Hint: 'help' is a good command to start with\n\n", [term.LIGHTGRAY, term.BLACK, term.BOLD, term.ITALIC, term.UNDERLINE]);
         showPrompt();
     }
 

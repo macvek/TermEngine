@@ -7,7 +7,10 @@ var term = {
     BLUE        : 34,        LIGHTBLUE   :94,
     MAGENTA     : 35,        LIGHTMAGENTA:95,
     CYAN        : 36,        LIGHTCYAN   :96,
-    LIGHTGRAY   : 37,        WHITE       :97
+    LIGHTGRAY   : 37,        WHITE       :97,
+    BOLD: 'bold',
+    UNDERLINE: 'underline',
+    ITALIC: 'italic'
 };
 
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
@@ -26,6 +29,9 @@ var ansiToCSS = {};
     a[term.CYAN]        = 'ansi-cyan';     a[term.LIGHTCYAN]   = 'ansi-lightcyan';
     a[term.LIGHTGRAY]   = 'ansi-lightgray';a[term.WHITE]       = 'ansi-white';
     
+    a[term.BOLD]        = 'textstyle-bold',
+    a[term.UNDERLINE]   = 'textstyle-underline',
+    a[term.ITALIC]      = 'textstyle-italic'
 }());
 
 window.term = term;
@@ -312,11 +318,10 @@ function TermWrite(buffer,iX,iY,text, textColors=[]) {
 
     for (var i=x;i<topX;i++) {
         line[i] = text.charAt(i-x);
-        if (textColors[0]) {
-            colorLine[i][0] = textColors[0]; 
-        }
-        if (textColors[1]) {
-            colorLine[i][1] = textColors[1];
+        for (var j=0;j<textColors.length;j++) {
+            if (textColors[j]) {
+                colorLine[i][j] = textColors[j]; 
+            }    
         }
     }
 }
@@ -377,8 +382,16 @@ function TermToggleVisible(what, forceHidden) {
     }
 }
 
-function cssClassNameFromAnsii(frontAndBackColor) {
-    return "FG-"+ansiToCSS[frontAndBackColor[0]]+" "+"BG-"+ansiToCSS[frontAndBackColor[1]];
+function cssClassNameFromAnsii(frontAndBackColorAndStyles) {
+    var frontColor = "FG-"+ansiToCSS[frontAndBackColorAndStyles[0]];
+    var backColor = "BG-"+ansiToCSS[frontAndBackColorAndStyles[1]];
+
+    var optionalStyles = [];
+    for (var i=2;i<frontAndBackColorAndStyles.length;i++) {
+        optionalStyles.push(ansiToCSS[frontAndBackColorAndStyles[i]]);
+    }
+    
+    return frontColor+" "+backColor+" "+optionalStyles.join(" ");
 }
 
 function randomColor() {
