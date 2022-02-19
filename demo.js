@@ -4,17 +4,22 @@ function demoApp() {
     var t = TermStart();
     
     t.HoldFlush();
-    t.Print("Welcome to ");
-    t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
-    t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
 
-    showPrompt();
+    //showPrompt();
+    callCommand("snake");
+
+    function welcomeScreen() {
+        clearConsole();
+        t.Print("Welcome to ");
+        t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
+        t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
+        showPrompt();
+    }
 
     function showPrompt() {
         t.Print("#>");
         t.Flush();
         readLine();
-        
     }
 
     function readLine() {
@@ -43,6 +48,11 @@ function demoApp() {
             minesweeperDemo();
             return false;
         }
+        else if (cmd === "snake") {
+            clearConsole();
+            snakeDemo();
+            return false;
+        }
 
         return true;
     }
@@ -51,10 +61,7 @@ function demoApp() {
         var echo = new Echo(t, c => {
            t.showCursor();
            clearInterval(matrixLoop);
-           clearConsole();
-           t.Println("Matrix demo is over, you are free to type more");
-           showPrompt();
-
+           welcomeScreen();
         });
         echo.Start();
 
@@ -390,8 +397,7 @@ function demoApp() {
             if ( ["Escape"].indexOf(e.key) != -1) {
                 window.removeEventListener('keydown', onKey);
                 t.showCursor();
-                clearConsole();
-                showPrompt();
+                welcomeScreen();
             }
             else if ( gameSettled && ["Enter"].indexOf(e.key) != -1) {
                 resetGame();
@@ -427,11 +433,171 @@ function demoApp() {
         }
     }
 
+    function snakeDemo() {
+        var snakeHead;
+        var snakeMove;
+        
+        var snakePoints;
+        var snakeLength;
+
+        var collectPoints;
+        var newCollectPointTimer;
+
+        function reset() {
+            snakeHead = [40,10];
+            snakeMove = [1,0];
+        
+            snakePoints = [];
+            snakeLength = 15;
+
+            collectPoints = [];
+            newCollectPointTimer = 10;
+        }
+
+        var loopHandler;
+        
+        reset();
+        startGame();
+
+        function startGame() {
+            t.hideCursor();
+            captureInput();
+            loopHandler = setInterval(loop, 100);
+        }
+
+        function stopGame() {
+            dropInput();
+            clearInterval(loopHandler);
+            t.showCursor();
+            welcomeScreen();
+        }
+
+        function captureInput() {
+            window.addEventListener('keydown', onKey);
+        }
+
+        function dropInput() {
+            window.removeEventListener('keydown', onKey);
+        }
+
+        function onKey(e) {
+            var lastMove = [].concat(snakeMove);
+            switch (e.key) {
+                case "ArrowLeft"    : snakeMove = [-1,0]; break;
+                case "ArrowRight"   : snakeMove = [1,0]; break;
+                case "ArrowUp"      : snakeMove = [0,-1]; break;
+                case "ArrowDown"    : snakeMove = [0,1]; break;
+                case "Escape"       : stopGame(); break;
+            }
+
+            if (lastMove[0]+snakeMove[0] === 0 && lastMove[1]+snakeMove[1] === 0) {
+                snakeMove = lastMove;
+            }
+        }
+
+        function loop() {
+            frame();
+            draw();
+        }
+       
+
+        function frame() {
+            if (!canMove()) {
+                reset();
+                return;
+            }
+            putPoint();
+            moveSnake();
+
+            checkCollectPoints();
+            newCollectPoint();
+
+            while(snakePoints.length > snakeLength) {
+                cutPoint();
+            }
+        }
+
+        function checkCollectPoints() {
+            var newPoints = [];
+            for (var i=0;i<collectPoints.length;i++) {
+                var each = collectPoints[i];
+                if (snakeHead[0] == each.x && snakeHead[1] == each.y) {
+                    snakeLength += 1;
+                }
+                else if (--each.t > 0) {
+                    newPoints.push(each);
+                }
+            }
+
+            collectPoints = newPoints;
+        }
+
+        function newCollectPoint() {
+            if (--newCollectPointTimer < 0 && collectPoints.length < 10) {
+                newCollectPointTimer = 10;
+                var collectPoint = {};
+                collectPoint.x = randomNum(80);
+                collectPoint.y = randomNum(24);
+                collectPoint.t = 50 + randomNum(50);
+
+                collectPoints.push(collectPoint);
+            }
+        }
+
+        function draw() {
+            t.HoldFlush();
+            t.EmptyBuffer();
+            for (var i=0;i<collectPoints.length;i++) {
+                var point = collectPoints[i];
+                t.SetCursorXY(point.x+1, point.y+1);
+                t.Print('o');
+            }
+
+            for (var i=0;i<snakePoints.length;i++) {
+                var point = snakePoints[i];
+                t.SetCursorXY(point[0]+1, point[1]+1);
+                t.Print('x');
+            }
+
+            t.SetCursorXY(snakeHead[0]+1, snakeHead[1]+1);
+            t.Print('X');
+
+            t.Flush();
+        }
+
+        function putPoint() {
+            var point = [].concat(snakeHead);
+            snakePoints.push(point);
+        }
+
+        function cutPoint() {
+            snakePoints.splice(0,1);
+        }
+
+        function moveSnake() {
+            snakeHead[0] = (80 + snakeHead[0] + snakeMove[0]) % 80;
+            snakeHead[1] = (24 + snakeHead[1] + snakeMove[1]) % 24;
+        }
+
+        function canMove() {
+            for (var i=0;i<snakePoints.length;i++) {
+                var each = snakePoints[i];
+                if (each[0] === snakeHead[0] && each[1] === snakeHead[1]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+    }
+
     function showHelp() {
         t.Println("##         HELP         ##", [term.WHITE, term.GRAY]);
         t.Println("cls - Clear screen");
         t.Println("matrix - brunette blondes and red");
         t.Println("minesweeper");
+        t.Println("snake");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 
