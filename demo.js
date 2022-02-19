@@ -5,8 +5,7 @@ function demoApp() {
     
     t.HoldFlush();
 
-    //showPrompt();
-    callCommand("snake");
+    showPrompt();
 
     function welcomeScreen() {
         clearConsole();
@@ -442,16 +441,22 @@ function demoApp() {
 
         var collectPoints;
         var newCollectPointTimer;
+        
+        var gameover;
+        var frameCount;
 
         function reset() {
             snakeHead = [40,10];
             snakeMove = [1,0];
         
             snakePoints = [];
-            snakeLength = 15;
+            snakeLength = 5;
 
             collectPoints = [];
             newCollectPointTimer = 10;
+
+            gameover = false;
+            frameCount = 0;
         }
 
         var loopHandler;
@@ -462,7 +467,7 @@ function demoApp() {
         function startGame() {
             t.hideCursor();
             captureInput();
-            loopHandler = setInterval(loop, 100);
+            loopHandler = setInterval(loop, 50);
         }
 
         function stopGame() {
@@ -488,6 +493,7 @@ function demoApp() {
                 case "ArrowUp"      : snakeMove = [0,-1]; break;
                 case "ArrowDown"    : snakeMove = [0,1]; break;
                 case "Escape"       : stopGame(); break;
+                case "Enter"        : if (gameover) {reset()}; break;
             }
 
             if (lastMove[0]+snakeMove[0] === 0 && lastMove[1]+snakeMove[1] === 0) {
@@ -496,19 +502,20 @@ function demoApp() {
         }
 
         function loop() {
-            frame();
+            if (!gameover) {
+                frame();
+            }
             draw();
         }
        
 
         function frame() {
-            if (!canMove()) {
-                reset();
-                return;
-            }
             putPoint();
             moveSnake();
-
+            if (!canMove()) {
+                gameover = true;
+                return;
+            }
             checkCollectPoints();
             newCollectPoint();
 
@@ -544,24 +551,112 @@ function demoApp() {
             }
         }
 
+        
         function draw() {
+            ++frameCount;
             t.HoldFlush();
             t.EmptyBuffer();
             for (var i=0;i<collectPoints.length;i++) {
                 var point = collectPoints[i];
                 t.SetCursorXY(point.x+1, point.y+1);
-                t.Print('o');
+                var color;
+                if (gameover) {
+                    color = term.GRAY;
+                }
+                else if (point.t > 50) {
+                    color = term.LIGHTCYAN;
+                }
+                else if (point.t > 30) {
+                    color = term.CYAN;
+                }
+                else if (point.t > 10) {
+                    color = term.MAGENTA;
+                }
+                else {
+                    color = term.BLUE;
+                }
+
+                t.Print('#', [color]);
             }
 
             for (var i=0;i<snakePoints.length;i++) {
                 var point = snakePoints[i];
+
                 t.SetCursorXY(point[0]+1, point[1]+1);
-                t.Print('x');
+                
+                var prev = i == 0 ? point : snakePoints[i-1];
+                var next = i == snakePoints.length-1 ? snakeHead : snakePoints[i+1];
+
+                var diffPrev = [
+                    prev[0] - point[0],
+                    prev[1] - point[1]
+                ];
+
+                var diffNext = [
+                    next[0] - point[0],
+                    next[1] - point[1]
+                ];
+
+                var chr;
+                if (diffPrev[0] == 0 && diffNext[0] == 0) {
+                    chr = '│';
+                }
+                else if (diffPrev[1] == 0 && diffNext[1] == 0) {
+                    chr = '─';
+                }
+                else if (diffPrev[0] == 0) {
+                    if (diffNext[0] < 0) { // turn left
+                        chr = diffPrev[1] < 0 ? '┘' : '┐'
+                    }
+                    else {  // turn right
+                        chr = diffPrev[1] < 0 ? '└' : '┌'
+                    }
+                }
+                else if (diffPrev[1] == 0) {
+                    if (diffNext[1] < 0) { // turn up
+                        chr = diffPrev[0] < 0 ? '┘' : '└'
+                    }
+                    else {  // turn down
+                        chr = diffPrev[0] < 0 ? '┐' : '┌'
+                    }
+                }
+
+                var color;
+                if (gameover) {
+                    color = Math.floor((i+frameCount)/3) % 2 == 1 ? term.LIGHTRED : term.RED;
+                }
+                else {
+                    color = Math.floor( i/3 % 2) == 1  ? term.LIGHTGREEN : term.GREEN;
+                }
+                
+                t.Print(chr, [color]);
             }
 
             t.SetCursorXY(snakeHead[0]+1, snakeHead[1]+1);
-            t.Print('X');
+            var snakeChr;
+            if (snakeMove[0] > 0) {
+                snakeChr = '>';
+            }
+            else if (snakeMove[0] < 0) {
+                snakeChr = '<';
+            }
+            else if (snakeMove[1] > 0) {
+                snakeChr = 'v';
+            }
+            else {
+                snakeChr = '^';
+            }
 
+            t.Print(snakeChr,[gameover ? term.LIGHTRED : term.LIGHTGREEN]);
+
+            if (gameover) {
+                t.SetCursorXY(22,5);
+                t.Print("              GAME OVER          ", [term.RED]);
+                t.SetCursorXY(22,6);
+                t.Print("            Your score: "+(snakeLength-5), [term.RED]);
+                t.SetCursorXY(22,8);
+                t.Print("(Escape) to quit (Enter) to try again", [term.WHITE]);
+            }
             t.Flush();
         }
 
