@@ -8,8 +8,7 @@ function demoApp() {
     t.Print("TERM Engine", [term.LIGHTGREEN, term.GREEN]);
     t.Print(" demo\nHint: 'help' is a good command to start with\n\n");
 
-    //showPrompt();
-    callCommand('minesweeper');
+    showPrompt();
 
     function showPrompt() {
         t.Print("#>");
