@@ -41,7 +41,7 @@ function TermStart() {
 
 }
 
-function Echo(termPack, onInput, onChange) {
+function Echo(termPack, onInput, onChange, hardLimit=500) {
     var startPos = [];
     var content = "";
     var editorCursor = 0;
@@ -81,7 +81,7 @@ function Echo(termPack, onInput, onChange) {
     }
 
     function onKeyDown(e) {
-        if (canAccept(e)) {
+        if (canAccept(e) && content.length < hardLimit) {
             putToContent(e.key);
             if (onChange) onChange(content, e);
             redraw();
@@ -92,8 +92,9 @@ function Echo(termPack, onInput, onChange) {
             onEnter();
         }
         else if (canEdit(e.key)) {
+            var blanks = content.length;
             performEdit(e.key);
-            redraw(content.length);
+            redraw(blanks);
         }
         else if (canMove(e.key)) {
             performMove(e.key);
