@@ -27,7 +27,7 @@ function demoApp() {
             if (callCommand(c)) {
                 showPrompt();
             }
-        }, null, 10);
+        });
         echo.Start();
     }
 
