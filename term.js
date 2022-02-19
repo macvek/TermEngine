@@ -87,12 +87,13 @@ function Echo(termPack, onInput, onChange) {
             redraw();
         }
         else if (e.key == 'Enter') {
+            editorCursor = content.length;
+            redraw(content.length);
             onEnter();
         }
         else if (canEdit(e.key)) {
-            var blanks = content.length;
             performEdit(e.key);
-            redraw(blanks);
+            redraw(content.length);
         }
         else if (canMove(e.key)) {
             performMove(e.key);
@@ -175,8 +176,10 @@ function Echo(termPack, onInput, onChange) {
         var afterCursor = content.substring(editorCursor);
         termPack.Print(beforeCursor);
         var cursorPos = termPack.GetCursorXY();
+        startPos[1] -= termPack.GetRecentRotates();
         termPack.Print(afterCursor);
         termPack.SetCursorXY(cursorPos[0], cursorPos[1]);
+        startPos[1] -= termPack.GetRecentRotates();
         termPack.Flush();
     }
 
@@ -190,6 +193,7 @@ function Echo(termPack, onInput, onChange) {
 }
 
 function TermPack(buffer, handler, cursor) {
+    var rotateCount = 0;
     var cursorPos = [1,1];
     var useFlush = true;
     var self = {
@@ -198,20 +202,25 @@ function TermPack(buffer, handler, cursor) {
         EmptyBuffer: EmptyBuffer,
         Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
         SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
-        showCursor: showCursor, hideCursor: hideCursor
+        ShowCursor: ShowCursor, HideCursor: HideCursor,
+        GetRecentRotates:GetRecentRotates
     }
     return self;
+
+    function GetRecentRotates() {
+        return rotateCount;
+    }
 
     function EmptyBuffer() {
         buffer = consoleBuffer();
     }
 
-    function showCursor() {
+    function ShowCursor() {
         self.cursorHidden = false;
         TermToggleVisible(cursor, self);
     }
 
-    function hideCursor() {
+    function HideCursor() {
         self.cursorHidden = true;
         TermToggleVisible(cursor, self);
     }
@@ -243,6 +252,7 @@ function TermPack(buffer, handler, cursor) {
     }
 
     function Print(text, optionalColor=[]) {
+        rotateCount = 0;
         var lastTail = 0;
         for (var i=0; i<text.length; i++) {
             var newLine = ( text.charAt(i) === '\n' );
@@ -256,6 +266,7 @@ function TermPack(buffer, handler, cursor) {
                 TermWrite(buffer, cursorPos[0], cursorPos[1], toRender, optionalColor);
 
                 if (cursorPos[1] == 24) {
+                    ++rotateCount;
                     consoleBufferRotate(buffer);
                 }
                 else {

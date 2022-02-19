@@ -58,13 +58,13 @@ function demoApp() {
 
     function matrixDemo() {
         var echo = new Echo(t, c => {
-           t.showCursor();
+           t.ShowCursor();
            clearInterval(matrixLoop);
            welcomeScreen();
         });
         echo.Start();
 
-        t.hideCursor();
+        t.HideCursor();
         var matrixLoop = setInterval(matrixOnScreen, 1000/30);
         var points = [];
         var chars = stringToArr("!@#$%^&*()+-=!@#[]\\/|?");
@@ -137,7 +137,7 @@ function demoApp() {
     }
 
     function minesweeperDemo() {
-        t.hideCursor();
+        t.HideCursor();
 
         var gameSettled;
         var gameResult;
@@ -395,7 +395,7 @@ function demoApp() {
             
             if ( ["Escape"].indexOf(e.key) != -1) {
                 window.removeEventListener('keydown', onKey);
-                t.showCursor();
+                t.ShowCursor();
                 welcomeScreen();
             }
             else if ( gameSettled && ["Enter"].indexOf(e.key) != -1) {
@@ -465,7 +465,7 @@ function demoApp() {
         startGame();
 
         function startGame() {
-            t.hideCursor();
+            t.HideCursor();
             captureInput();
             loopHandler = setInterval(loop, 50);
         }
@@ -473,7 +473,7 @@ function demoApp() {
         function stopGame() {
             dropInput();
             clearInterval(loopHandler);
-            t.showCursor();
+            t.ShowCursor();
             welcomeScreen();
         }
 
