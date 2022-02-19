@@ -5,7 +5,7 @@ function demoApp() {
     
     t.HoldFlush();
 
-    showPrompt();
+    welcomeScreen();
 
     function welcomeScreen() {
         clearConsole();
