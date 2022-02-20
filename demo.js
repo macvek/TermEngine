@@ -2,7 +2,7 @@ window.addEventListener('load', demoApp);
 
 function demoApp() {
     var history = EchoHistory();
-    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake"] ));
+    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "shadows"] ));
     var t = TermStart();
     
     t.HoldFlush();
@@ -55,6 +55,11 @@ function demoApp() {
         else if (cmd === "snake") {
             clearConsole();
             snakeDemo();
+            return false;
+        }
+        else if (cmd === "shadows") {
+            clearConsole();
+            shadowsDemo();
             return false;
         }
 
@@ -692,12 +697,50 @@ function demoApp() {
 
     }
 
+    function shadowsDemo() {
+        start();
+
+        function draw() {
+            var screen = TermBuffer(20,1);
+            TermWrite(screen, 1,1, "Hello World");
+            t.PutBuffer(screen,5,5);
+
+            t.SetCursorXY(5,5);
+            t.Println("NO SUCH TEXT", [term.BLUE, term.CYAN, term.BOLD]);
+            var snapshot = t.CloneBuffer();
+
+            
+            t.PutBuffer(screen,5,5);
+            t.PutBuffer(snapshot,1,1);
+            
+        }
+
+        function start() {
+            window.addEventListener('keydown', onKey);
+            draw();
+        }
+
+        function stop() {
+            window.removeEventListener('keydown', onKey);
+            welcomeScreen();
+        }
+
+        function onKey(e) {
+            if (e.key === "Escape") {
+                stop();
+            }
+        }
+
+        
+    }
+
     function showHelp() {
         t.Println("##         HELP         ##", [term.WHITE, term.GRAY]);
         t.Println("cls - Clear screen");
         t.Println("matrix - brunette blondes and red");
         t.Println("minesweeper");
         t.Println("snake");
+        t.Println("shadows - bitmap rendering demo");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 

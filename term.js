@@ -297,7 +297,7 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
     }
 
     function canAccept(keyEvent) {
-        return !keyEvent.altKey && !keyEvent.ctrlKey && keyEvent.key.length == 1
+        return !keyEvent.altKey && !keyEvent.ctrlKey && keyEvent.key.length == 1;
     }
 
     function canEdit(keyName) {
@@ -353,12 +353,28 @@ function TermPack(buffer, handler, cursor) {
         cursorHidden: false,
 
         EmptyBuffer: EmptyBuffer,
+        PutBuffer: PutBuffer,
+        CloneBuffer,CloneBuffer,
         Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
         SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
         ShowCursor: ShowCursor, HideCursor: HideCursor,
         GetRecentRotates:GetRecentRotates
     }
     return self;
+
+    function PutBuffer(bitmap, idx1X, idx1Y, srcLeft=0, srcTop=0, aSrcRight=-1, aSrcBottom=-1) {
+        var srcRight = aSrcRight != -1 ? aSrcRight : bitmap.w;
+        var srcBottom = aSrcBottom != -1 ? aSrcBottom : bitmap.h;
+
+        TermPutBitmap(bitmap, srcLeft, srcTop, srcRight, srcBottom, buffer, idx1X-1, idx1Y-1);
+        if (useFlush) {
+            Flush();
+        }
+    }
+
+    function CloneBuffer() {
+        return TermCloneBuffer(buffer);
+    }
 
     function GetRecentRotates() {
         return rotateCount;
@@ -447,6 +463,23 @@ function TermPack(buffer, handler, cursor) {
     }
 }
 
+
+function TermPutBitmap(srcBitmap, srcLeft, srcTop, srcRight, srcBottom, destBitmap, destLeft, destTop) {
+    var srcChars = srcBitmap.chars;
+    var srcColors = srcBitmap.colors;
+    var destChars = destBitmap.chars;
+    var destColors = destBitmap.colors;
+ 
+    var width = srcRight-srcLeft;
+    var height = srcBottom-srcTop;
+
+    for (var y=0;y<height;y++) {
+        for (var x=0;x<width;x++) {
+            destChars[y+destTop][x+destLeft] = srcChars[y+srcLeft][x+srcTop];
+            destColors[y+destTop][x+destLeft] = [].concat( srcColors[y+srcLeft][x+srcTop] );
+        }
+    }
+}
 
 function TermWrite(buffer,iX,iY,text, textColors=[]) {
     var x = iX -1;
@@ -611,16 +644,27 @@ function buildCursor() {
 }
 
 function consoleBuffer() {
+    return TermBuffer(80,24);
+}
+
+function TermBuffer(width,height) {
     var characters = [];
     var colors = [];
 
-    for (var y=0;y<24;y++) {
-        var linePair = consoleBufferLine();
+    for (var y=0;y<height;y++) {
+        var linePair = consoleBufferLine(width);
         characters.push(linePair[0]);
         colors.push(linePair[1]);
     }
 
-    return {chars: characters, colors:colors}
+    return {chars: characters, colors:colors, w:width, h:height}
+}
+
+function TermCloneBuffer(src) {
+    var dest = TermBuffer(src.w, src.h);
+    TermPutBitmap(src, 0, 0, src.w, src.h, dest, 0,0);
+
+    return dest;
 }
 
 function consoleBufferRotate(buffer) {
@@ -635,10 +679,10 @@ function consoleBufferRotate(buffer) {
     colors.push(linePair[1]);
 }
 
-function consoleBufferLine() {
+function consoleBufferLine(w=80) {
     var line = [];
     var colorLine = [];
-    for (var x=0;x<80;x++) {
+    for (var x=0;x<w;x++) {
         line.push(' ');
         colorLine.push([term.LIGHTGRAY,term.BLACK]);
     }
