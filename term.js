@@ -47,6 +47,42 @@ function TermStart() {
 
 }
 
+function EchoHintsProviderList(list) {
+    var allCommands = [].concat(list);
+    allCommands.sort();
+    return function(prefix) {
+        var out = [];
+        for (let i=0;i<allCommands.length;i++) {
+            var each = allCommands[i];
+            if ('' == prefix || each.indexOf(prefix) == 0) {
+                out.push(each);
+            }
+        }
+
+        return out;
+    }
+}
+
+function EchoHints(hintProvider) {
+    var store;
+    var ptr;
+    
+    return {
+        Hint: Hint,
+        Next: Next
+    };
+
+    function Hint(text) {
+        store = hintProvider(text);
+        ptr = 0;
+    }
+
+    function Next() {
+        return store[ptr++ % store.length];
+    }
+
+}
+
 function EchoHistory(size=1000) {
     var store = [""];
     var ptr = 0;
@@ -83,7 +119,9 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
     var editorCursor = 0;
     var cleanupAfterInput;
     var history = null;
-    var historyDirty = false;
+    var historyInProgress = false;
+    var hintInProgress = false;
+    var hints;
 
     return {
         Start:Start,
@@ -92,6 +130,7 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
         GetContent:GetContent,
         SetContent:SetContent,
         UseHistory:UseHistory,
+        UseHints:UseHints,
     }
     
     function Start(aCleanupAfterInput=false) {
@@ -123,10 +162,13 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
         history = aHistory;
     }
 
+    function UseHints(aHints) {
+        hints = aHints;
+    }
+
     function onKeyDown(e) {
         if (canAccept(e) && content.length < hardLimit) {
             putToContent(e.key);
-            historyDirty = true;
             if (onChange) onChange(content, e);
             redraw();
         }
@@ -144,17 +186,33 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
             performMove(e.key);
             redraw();
         }
-        else if (canHistory(e.key)) {
+        
+        if (canHistory(e.key)) {
             var blanks = content.length;
-            if (history && historyDirty) {
+            if (history && !historyInProgress) {
                 history.Put(content);
                 history.Prev();
-                historyDirty = false;    
+                historyInProgress = true;    
             }
             
             performHistory(e.key);
             redraw(blanks);            
         }
+        else {
+            historyInProgress = false;
+        }
+        
+        if (canHints(e.key)) {
+            e.preventDefault();
+            var blanks = content.length;
+            if (performHint()) {
+                redraw(blanks);
+            }
+        }
+        else {
+            hintInProgress = false;
+        }
+
     }
 
     function onEnter() {
@@ -200,6 +258,25 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
 
         editorCursor = boundIn(0, editorCursor, content.length);
 
+    }
+
+    function canHints(keyName) {
+        return "Tab" == keyName && hints != null;
+    }
+
+    function performHint() {
+        if (!hintInProgress) {
+            hints.Hint(content);
+            hintInProgress = true;
+        }
+
+        let nextHint = hints.Next();
+        if (nextHint) {
+            content = nextHint;
+            editorCursor = content.length;
+
+            return true;
+        }
     }
 
     function canHistory(keyName) {

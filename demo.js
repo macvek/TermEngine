@@ -2,6 +2,7 @@ window.addEventListener('load', demoApp);
 
 function demoApp() {
     var history = EchoHistory();
+    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake"] ));
     var t = TermStart();
     
     t.HoldFlush();
@@ -31,6 +32,7 @@ function demoApp() {
         });
         echo.Start();
         echo.UseHistory(history);
+        echo.UseHints(hints);
     }
 
     function callCommand(cmd) {
