@@ -47,18 +47,51 @@ function TermStart() {
 
 }
 
+function EchoHistory(size=1000) {
+    var store = [""];
+    var ptr = 0;
+    
+    return {
+        Put: Put,
+        Prev: Prev,
+        Next: Next
+    }
+
+    function Put(it) {
+        if (store.length >= size) {
+            store.splice(0,1);
+        }
+        store.push(it);
+        ptr = store.length;
+    }
+
+    function Prev() {
+        ptr = boundIn(0, ptr-1, store.length-1);
+        return store[ptr];
+    }
+
+    function Next() {
+        ptr = boundIn(0, ptr+1, store.length-1);
+        return store[ptr];
+    }
+
+}
+
 function Echo(termPack, onInput, onChange, hardLimit=500) {
     var startPos = [];
     var content = "";
     var editorCursor = 0;
     var cleanupAfterInput;
+    var history = null;
+    var historyDirty = false;
 
     return {
         Start:Start,
         Stop:Stop,
         Reset:Reset,
         GetContent:GetContent,
-        SetContent:SetContent
+        SetContent:SetContent,
+        UseHistory:UseHistory,
     }
     
     function Start(aCleanupAfterInput=false) {
@@ -86,9 +119,14 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
         redraw();
     }
 
+    function UseHistory(aHistory) {
+        history = aHistory;
+    }
+
     function onKeyDown(e) {
         if (canAccept(e) && content.length < hardLimit) {
             putToContent(e.key);
+            historyDirty = true;
             if (onChange) onChange(content, e);
             redraw();
         }
@@ -106,6 +144,17 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
             performMove(e.key);
             redraw();
         }
+        else if (canHistory(e.key)) {
+            var blanks = content.length;
+            if (history && historyDirty) {
+                history.Put(content);
+                history.Prev();
+                historyDirty = false;    
+            }
+            
+            performHistory(e.key);
+            redraw(blanks);            
+        }
     }
 
     function onEnter() {
@@ -118,6 +167,9 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
             termPack.Print("\n");
         }
         onInput(content);
+        if (history) {
+            history.Put(content);
+        }
         Stop();
     }
 
@@ -148,6 +200,23 @@ function Echo(termPack, onInput, onChange, hardLimit=500) {
 
         editorCursor = boundIn(0, editorCursor, content.length);
 
+    }
+
+    function canHistory(keyName) {
+        return history != null && ( ["ArrowUp", "ArrowDown"].indexOf(keyName) !== -1);
+    }
+
+    function performHistory(keyName) {
+        var value;
+        if (keyName === "ArrowUp") {
+            value = history.Prev();
+        }
+        else {
+            value = history.Next();
+        }
+
+        content = value;
+        editorCursor = content.length;
     }
 
     function canAccept(keyEvent) {

@@ -1,6 +1,7 @@
 window.addEventListener('load', demoApp);
 
 function demoApp() {
+    var history = EchoHistory();
     var t = TermStart();
     
     t.HoldFlush();
@@ -21,7 +22,7 @@ function demoApp() {
         t.Flush();
         readLine();
     }
-
+  
     function readLine() {
         var echo = new Echo(t, c => {
             if (callCommand(c)) {
@@ -29,6 +30,7 @@ function demoApp() {
             }
         });
         echo.Start();
+        echo.UseHistory(history);
     }
 
     function callCommand(cmd) {
