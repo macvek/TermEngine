@@ -708,10 +708,13 @@ function demoApp() {
             t.SetCursorXY(5,5);
             t.Println("NO SUCH TEXT", [term.BLUE, term.CYAN, term.BOLD]);
             var snapshot = t.CloneBuffer();
+            var reversed = TermBuffer(20,1);
+            TermMapBuffer( function(srcChr, srcColor) {
+                    return [srcChr, [srcColor[1], srcColor[0]]];
+                }, snapshot, 4,4,24,5, reversed, 0, 0);
 
-            
-            t.PutBuffer(screen,5,5);
             t.PutBuffer(snapshot,1,1);
+            t.PutBuffer(reversed,20,1);
             
         }
 

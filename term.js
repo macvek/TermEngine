@@ -366,7 +366,7 @@ function TermPack(buffer, handler, cursor) {
         var srcRight = aSrcRight != -1 ? aSrcRight : bitmap.w;
         var srcBottom = aSrcBottom != -1 ? aSrcBottom : bitmap.h;
 
-        TermPutBitmap(bitmap, srcLeft, srcTop, srcRight, srcBottom, buffer, idx1X-1, idx1Y-1);
+        TermPutBuffer(bitmap, srcLeft, srcTop, srcRight, srcBottom, buffer, idx1X-1, idx1Y-1);
         if (useFlush) {
             Flush();
         }
@@ -464,20 +464,35 @@ function TermPack(buffer, handler, cursor) {
 }
 
 
-function TermPutBitmap(srcBitmap, srcLeft, srcTop, srcRight, srcBottom, destBitmap, destLeft, destTop) {
-    var srcChars = srcBitmap.chars;
-    var srcColors = srcBitmap.colors;
-    var destChars = destBitmap.chars;
-    var destColors = destBitmap.colors;
+function TermMapBuffer(mapper, srcBuffer, srcLeft, srcTop, srcRight, srcBottom, destBuffer, destLeft, destTop) {
+    var srcChars = srcBuffer.chars;
+    var srcColors = srcBuffer.colors;
+    var destChars = destBuffer.chars;
+    var destColors = destBuffer.colors;
  
     var width = srcRight-srcLeft;
     var height = srcBottom-srcTop;
 
     for (var y=0;y<height;y++) {
         for (var x=0;x<width;x++) {
-            destChars[y+destTop][x+destLeft] = srcChars[y+srcLeft][x+srcTop];
-            destColors[y+destTop][x+destLeft] = [].concat( srcColors[y+srcLeft][x+srcTop] );
+            var srcChar = srcChars[y+srcLeft][x+srcTop];
+            var srcColor = srcColors[y+srcLeft][x+srcTop];
+            var destChar = destChars[y+destTop][x+destLeft];
+            var destColor = destColors[y+destTop][x+destLeft];
+
+            var mappedPair = mapper(srcChar, [].concat(srcColor), destChar, destColor);
+
+            destChars[y+destTop][x+destLeft] = mappedPair[0];
+            destColors[y+destTop][x+destLeft] = mappedPair[1];
         }
+    }
+}
+
+function TermPutBuffer(srcBuffer, srcLeft, srcTop, srcRight, srcBottom, destBuffer, destLeft, destTop) {
+    TermMapBuffer(copyCharAndColor, srcBuffer, srcLeft, srcTop, srcRight, srcBottom, destBuffer, destLeft, destTop);
+
+    function copyCharAndColor(chr, color) {
+        return [chr, color];
     }
 }
 
@@ -662,7 +677,7 @@ function TermBuffer(width,height) {
 
 function TermCloneBuffer(src) {
     var dest = TermBuffer(src.w, src.h);
-    TermPutBitmap(src, 0, 0, src.w, src.h, dest, 0,0);
+    TermPutBuffer(src, 0, 0, src.w, src.h, dest, 0,0);
 
     return dest;
 }
