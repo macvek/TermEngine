@@ -750,12 +750,34 @@ function demoApp() {
                 TermPutBuffer(textBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
                 TermMapBuffer(overlay, shadowBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
             }
-
+            var redLineIdx = frame % 24;
+            TermMapBuffer(markRed, workingCopy, 0, redLineIdx, 80, redLineIdx+1, workingCopy, 0, redLineIdx);
+            
             t.PutBuffer(workingCopy, 1,1);
             ++frame;
         }
 
-        function overlay( srcChr, srcColor, destChr, destColor ) {
+        function markRed(srcChr, srcColor, destChr, destColor) {
+            var color;
+            if (srcColor[0] === term.WHITE) {
+                color = term.LIGHTRED;
+                
+            }
+            else if (srcColor[0] === term.GRAY) {
+                color = term.RED;
+            }
+            else {
+                color = srcColor;
+            }
+
+            var colorFinal = [].concat(destColor);
+            colorFinal[0] = color;
+               
+            return [destChr, colorFinal];
+            
+        }
+
+        function overlay(srcChr, srcColor, destChr, destColor) {
             if (destChr == ' ') {
                 return [srcChr, srcColor];
             }

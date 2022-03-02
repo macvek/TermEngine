@@ -463,7 +463,6 @@ function TermPack(buffer, handler, cursor) {
     }
 }
 
-
 function TermMapBuffer(mapper, srcBuffer, srcLeft, srcTop, srcRight, srcBottom, destBuffer, destLeft, destTop) {
     var srcChars = srcBuffer.chars;
     var srcColors = srcBuffer.colors;
