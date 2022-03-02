@@ -725,55 +725,39 @@ function demoApp() {
         "Zieloną, na niej z rzadka ciche grusze siedzą."];
 
         var textBuffer = TermBuffer(80,srcText.length*2);
+        var shadowBuffer = TermBuffer(81, srcText.length*2 +1);
         for (var i=0;i<srcText.length;i++) {
             var line = srcText[i];
             var posX = Math.ceil((80-line.length) / 2);
-            TermWrite(textBuffer, posX, (i*2)+1, line, [term.WHITE, term.BLACK]);
+            var textStyle = i == 0 ? [term.WHITE, term.BLACK, term.BOLD] : [term.WHITE, term.BLACK];
+            TermWrite(textBuffer, posX, (i*2)+1, line, textStyle);
+            TermWrite(shadowBuffer, posX+1, (i*2)+2, line, [term.GRAY, term.BLACK]);
         }
 
         var frame = 0;
         function draw() {
             var workingCopy = TermBuffer(80,24);
             
-            var offH = Math.floor(frame / 10) % textBuffer.h;
-            var topH = Math.max(offH+24, textBuffer.h);
+            var srcTop = Math.floor(frame / 10) % textBuffer.h;
+            var srcBottom = Math.min(textBuffer.h, srcTop+24);
+            TermPutBuffer(textBuffer, 0, srcTop, 80, srcBottom, workingCopy, 0,0);
+            TermMapBuffer(overlay, shadowBuffer, 0, srcTop, 80, srcBottom, workingCopy, 0,0);
 
-            // if (topH < textBuffer.h) {
-            //     TermPutBuffer(textBuffer, 0, offH, 80, topH, workingCopy, 0,0);
-            // }
-            // else {
-            //     TermPutBuffer(textBuffer, 0, offH, 80, topH, workingCopy, 0,0);
-            // }
-
-            TermPutBuffer(textBuffer, 0, 0, 80, 24, workingCopy, 0,0);
-            TermMapBuffer(textShadow, textBuffer, 0,0,80-1,24-1, workingCopy, 1,1);
-            t.PutBuffer(workingCopy, 1,1);
-
-
-            ++frame;
-
-            if (false) {
-                var screen = TermBuffer(20,1);
-                TermWrite(screen, 1,1, "Hello World");
-                t.PutBuffer(screen,5,5);
-
-                t.SetCursorXY(5,5);
-                t.Println("NO SUCH TEXT", [term.BLUE, term.CYAN, term.BOLD]);
-                var snapshot = t.CloneBuffer();
-                var reversed = TermBuffer(20,1);
-                TermMapBuffer( function(srcChr, srcColor) {
-                        return [srcChr, [srcColor[1], srcColor[0]]];
-                    }, snapshot, 4,4,24,5, reversed, 0, 0);
-
-                t.PutBuffer(snapshot,1,1);
-                t.PutBuffer(reversed,20,1);
+            if (srcBottom - srcTop < 24) {
+                var nextDestTop = srcBottom - srcTop
+                var nextSrcBottom = 24 - nextDestTop;
+                
+                TermPutBuffer(textBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
+                TermMapBuffer(overlay, shadowBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
             }
-            
+
+            t.PutBuffer(workingCopy, 1,1);
+            ++frame;
         }
 
-        function textShadow( srcChr, srcColor, destChr, destColor ) {
+        function overlay( srcChr, srcColor, destChr, destColor ) {
             if (destChr == ' ') {
-                return [srcChr, [term.GRAY, term.BLACK]];
+                return [srcChr, srcColor];
             }
             else {
                 return [destChr, destColor];
