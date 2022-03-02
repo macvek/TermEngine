@@ -475,8 +475,8 @@ function TermMapBuffer(mapper, srcBuffer, srcLeft, srcTop, srcRight, srcBottom, 
 
     for (var y=0;y<height;y++) {
         for (var x=0;x<width;x++) {
-            var srcChar = srcChars[y+srcLeft][x+srcTop];
-            var srcColor = srcColors[y+srcLeft][x+srcTop];
+            var srcChar = srcChars[y+srcTop][x+srcLeft];
+            var srcColor = srcColors[y+srcTop][x+srcLeft];
             var destChar = destChars[y+destTop][x+destLeft];
             var destColor = destColors[y+destTop][x+destLeft];
 

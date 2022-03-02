@@ -700,31 +700,94 @@ function demoApp() {
     function shadowsDemo() {
         start();
 
+        var loop;
+        var srcText = ["Litwo! Ojczyzno moja! ty jesteś jak zdrowie:",
+        "Ile cię trzeba cenić, ten tylko się dowie,",
+        "Kto cię stracił. Dziś piękność twą w całej ozdobie",
+        "Widzę i opisuję, bo tęsknię po tobie.",
+        "Panno święta, co Jasnej bronisz Częstochowy",
+        "I w Ostrej świecisz Bramie! Ty, co gród zamkowy",
+        "Nowogródzki ochraniasz z jego wiernym ludem!",
+        "Jak mnie dziecko do zdrowia powróciłaś cudem",
+        "(Gdy od płaczącej matki, pod Twoją opiekę",
+        "Ofiarowany, martwą podniosłem powiekę;",
+        "I zaraz mogłem pieszo, do Twych świątyń progu",
+        "Iść za wrócone życie podziękować Bogu),",
+        "Tak nas powrócisz cudem na Ojczyzny łono.",
+        "Tymczasem przenoś moją duszę utęsknioną",
+        "Do tych pagórków leśnych, do tych łąk zielonych,",
+        "Szeroko nad błękitnym Niemnem rozciągnionych;",
+        "Do tych pól malowanych zbożem rozmaitem,",
+        "Wyzłacanych pszenicą, posrebrzanych żytem;",
+        "Gdzie bursztynowy świerzop, gryka jak śnieg biała,",
+        "Gdzie panieńskim rumieńcem dzięcielina pała,",
+        "A wszystko przepasane jakby wstęgą, miedzą",
+        "Zieloną, na niej z rzadka ciche grusze siedzą."];
+
+        var textBuffer = TermBuffer(80,srcText.length*2);
+        for (var i=0;i<srcText.length;i++) {
+            var line = srcText[i];
+            var posX = Math.ceil((80-line.length) / 2);
+            TermWrite(textBuffer, posX, (i*2)+1, line, [term.WHITE, term.BLACK]);
+        }
+
+        var frame = 0;
         function draw() {
-            var screen = TermBuffer(20,1);
-            TermWrite(screen, 1,1, "Hello World");
-            t.PutBuffer(screen,5,5);
-
-            t.SetCursorXY(5,5);
-            t.Println("NO SUCH TEXT", [term.BLUE, term.CYAN, term.BOLD]);
-            var snapshot = t.CloneBuffer();
-            var reversed = TermBuffer(20,1);
-            TermMapBuffer( function(srcChr, srcColor) {
-                    return [srcChr, [srcColor[1], srcColor[0]]];
-                }, snapshot, 4,4,24,5, reversed, 0, 0);
-
-            t.PutBuffer(snapshot,1,1);
-            t.PutBuffer(reversed,20,1);
+            var workingCopy = TermBuffer(80,24);
             
+            var offH = Math.floor(frame / 10) % textBuffer.h;
+            var topH = Math.max(offH+24, textBuffer.h);
+
+            // if (topH < textBuffer.h) {
+            //     TermPutBuffer(textBuffer, 0, offH, 80, topH, workingCopy, 0,0);
+            // }
+            // else {
+            //     TermPutBuffer(textBuffer, 0, offH, 80, topH, workingCopy, 0,0);
+            // }
+
+            TermPutBuffer(textBuffer, 0, 0, 80, 24, workingCopy, 0,0);
+            TermMapBuffer(textShadow, textBuffer, 0,0,80-1,24-1, workingCopy, 1,1);
+            t.PutBuffer(workingCopy, 1,1);
+
+
+            ++frame;
+
+            if (false) {
+                var screen = TermBuffer(20,1);
+                TermWrite(screen, 1,1, "Hello World");
+                t.PutBuffer(screen,5,5);
+
+                t.SetCursorXY(5,5);
+                t.Println("NO SUCH TEXT", [term.BLUE, term.CYAN, term.BOLD]);
+                var snapshot = t.CloneBuffer();
+                var reversed = TermBuffer(20,1);
+                TermMapBuffer( function(srcChr, srcColor) {
+                        return [srcChr, [srcColor[1], srcColor[0]]];
+                    }, snapshot, 4,4,24,5, reversed, 0, 0);
+
+                t.PutBuffer(snapshot,1,1);
+                t.PutBuffer(reversed,20,1);
+            }
+            
+        }
+
+        function textShadow( srcChr, srcColor, destChr, destColor ) {
+            if (destChr == ' ') {
+                return [srcChr, [term.GRAY, term.BLACK]];
+            }
+            else {
+                return [destChr, destColor];
+            }
         }
 
         function start() {
             window.addEventListener('keydown', onKey);
-            draw();
+            loop = setInterval(draw, Math.floor(1000/31));
         }
 
         function stop() {
             window.removeEventListener('keydown', onKey);
+            clearInterval(loop);
             welcomeScreen();
         }
 
