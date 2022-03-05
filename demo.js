@@ -2,7 +2,7 @@ window.addEventListener('load', demoApp);
 
 function demoApp() {
     var history = EchoHistory();
-    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "shadows"] ));
+    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "invocation"] ));
     var t = TermStart();
     
     t.HoldFlush();
@@ -57,9 +57,9 @@ function demoApp() {
             snakeDemo();
             return false;
         }
-        else if (cmd === "shadows") {
+        else if (cmd === "invocation") {
             clearConsole();
-            shadowsDemo();
+            invocationDemo();
             return false;
         }
 
@@ -697,7 +697,7 @@ function demoApp() {
 
     }
 
-    function shadowsDemo() {
+    function invocationDemo() {
         start();
 
         var loop;
@@ -737,6 +737,7 @@ function demoApp() {
         var frame = 0;
         function draw() {
             var workingCopy = TermBuffer(80,24);
+            var sinusLine = TermBuffer(80,12);
             
             var srcTop = Math.floor(frame / 31) % textBuffer.h;
             var srcBottom = Math.min(textBuffer.h, srcTop+24);
@@ -750,28 +751,58 @@ function demoApp() {
                 TermPutBuffer(textBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
                 TermMapBuffer(overlay, shadowBuffer, 0, 0, 80, nextSrcBottom, workingCopy, 0, nextDestTop);
             }
-            var redLineIdx = frame % 24;
-            TermMapBuffer(markRed, workingCopy, 0, redLineIdx, 80, redLineIdx+1, workingCopy, 0, redLineIdx);
             
+
+
+            var bitmap = [];
+            for (var i=0;i<sinusLine.h;i++) {
+                bitmap.push( '################################################################################'.split('') );
+            }
+
+            for (var i=0;i<80;i++) {
+                var animFrame = frame / 8;
+                var value = Math.sin(2* Math.PI * i/80.0 + animFrame);
+                var onBitmap = Math.round((value + 1)/2 * bitmap.length);
+                for (var j = onBitmap;j<bitmap.length;j++) {
+                    bitmap[j][i] = "x";
+                }
+            }
+
+            for (var i=0;i<bitmap.length;i++) {
+                bitmap[i] = bitmap[i].join('');
+            }
+            
+            for (var i=0;i<bitmap.length;i++) {
+                TermWrite(sinusLine, 1, i+1, bitmap[i]);
+            }
+            
+            var flagTop = Math.floor((24 - bitmap.length)/2);
+            var restTop = bitmap.length + flagTop;
+
+            TermMapBuffer(markRed, sinusLine, 0, 0, 80, bitmap.length, workingCopy, 0, flagTop);
+            TermMapBuffer(markRed, workingCopy,0, restTop, 80, 24, workingCopy, 0, restTop);
+
             t.PutBuffer(workingCopy, 1,1);
             ++frame;
         }
 
         function markRed(srcChr, srcColor, destChr, destColor) {
             var color;
-            if (srcColor[0] === term.WHITE) {
-                color = term.LIGHTRED;
-                
+            if (srcChr === '#' ) {
+                return [destChr, destColor];
             }
-            else if (srcColor[0] === term.GRAY) {
+            
+            if (destColor[0] === term.WHITE) {
+                color = term.LIGHTRED;
+            }
+            else if (destColor[0] === term.GRAY) {
                 color = term.RED;
             }
             else {
-                color = srcColor;
+                color = destColor;
             }
 
-            var colorFinal = [].concat(destColor);
-            colorFinal[0] = color;
+            var colorFinal = [color, term.BLACK, term.BOLD];
                
             return [destChr, colorFinal];
             
@@ -814,7 +845,7 @@ function demoApp() {
         t.Println("matrix - brunette blondes and red");
         t.Println("minesweeper");
         t.Println("snake");
-        t.Println("shadows - bitmap rendering demo");
+        t.Println("invocation - bitmap rendering demo");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 
