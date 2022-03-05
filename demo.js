@@ -738,7 +738,7 @@ function demoApp() {
         function draw() {
             var workingCopy = TermBuffer(80,24);
             
-            var srcTop = Math.floor(frame / 10) % textBuffer.h;
+            var srcTop = Math.floor(frame / 31) % textBuffer.h;
             var srcBottom = Math.min(textBuffer.h, srcTop+24);
             TermPutBuffer(textBuffer, 0, srcTop, 80, srcBottom, workingCopy, 0,0);
             TermMapBuffer(overlay, shadowBuffer, 0, srcTop, 80, srcBottom, workingCopy, 0,0);
@@ -787,11 +787,13 @@ function demoApp() {
         }
 
         function start() {
+            t.HideCursor();
             window.addEventListener('keydown', onKey);
             loop = setInterval(draw, Math.floor(1000/31));
         }
 
         function stop() {
+            t.ShowCursor();
             window.removeEventListener('keydown', onKey);
             clearInterval(loop);
             welcomeScreen();
