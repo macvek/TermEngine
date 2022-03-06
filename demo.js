@@ -266,9 +266,9 @@ function demoApp() {
         }
 
         function drawInfoboard() {
-            var winMessage   = "       VICTOR       ";
-            var lostMessage  = "       LOSSER       ";
-            var noMessage = "                    ";
+            var winMessage   = "       VICTORY      ";
+            var lostMessage  = "        LOSER       ";
+            var noMessage    = "                    ";
 
             var inGameKeys  = "          (ESC) to quit          ";
             var afterGame   = "(ESC) to quit, (ENTER) to restart";
@@ -291,18 +291,7 @@ function demoApp() {
         }
 
         function drawMap() {
-            t.SetCursorXY(31, 7);    t.Print("┌──────────────────┐", currentColors);
-            t.SetCursorXY(31, 8);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31, 9);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,10);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,11);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,12);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,13);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,14);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,15);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,16);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,17);    t.Print("│                  │", currentColors);
-            t.SetCursorXY(31,18);    t.Print("└──────────────────┘", currentColors);
+            t.DrawBox(31, 7, 20, 12,TermBorder(' '), currentColors);
         }
 
         function drawFields() {
