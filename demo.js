@@ -2,7 +2,7 @@ window.addEventListener('load', demoApp);
 
 function demoApp() {
     var history = EchoHistory();
-    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "invocation"] ));
+    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "invocation", "boxes"] ));
     var t = TermStart();
     
     t.HoldFlush();
@@ -62,8 +62,64 @@ function demoApp() {
             invocationDemo();
             return false;
         }
+        else if (cmd === "boxes") {
+            clearConsole();
+            boxesDemo();
+            return false;
+        }
 
         return true;
+    }
+
+    function boxesDemo() {
+        t.DrawBox(1,1, 20,5, [
+            '1','2','3',
+            '4','5','6',
+            '7','8','9'
+            ], [term.WHITE], ' Sample title ');
+
+        t.DrawBox(2,7, 20,5, [
+            'x','-','x',
+            '|',':','|',
+            'x','-','x'
+        ], [term.GRAY], 'THIS IS TRIMMED .......XXXXXXX');
+        t.SetCursorXY(1,24); 
+        
+        t.DrawBox(25,2, 2,2, [
+            '0','-','0',
+            '|',':','|',
+            '0','-','0'
+        ], [term.RED], 'This is smallest box, and this should not be visible');
+        t.SetCursorXY(1,24); 
+
+        t.DrawBox(60,10, 5,5, [
+            '0','-','0',
+            '|',null,'|',
+            '0','-','0'
+        ], [term.YELLOW]);
+
+        t.DrawBox(58,8, 6,6, [
+            '1','C','1',
+            'A',null,'A',
+            '1','C','1'
+        ], [term.BLUE]);
+
+        t.DrawBox(31,5, 6,6, [
+            '1','C',null,
+            'A',null,null,
+            '1','C',null
+        ], [term.MAGENTA]);
+        
+        t.DrawBox(35,5, 6,6, [
+            null,'C','1',
+            null,null,'A',
+            null,'C','1'
+        ], [term.LIGHTMAGENTA]);
+
+        t.DrawBox(20,15, 20,8, TermBorder(), [term.LIGHTMAGENTA, term.MAGENTA], ' TermBorder() ');
+        t.DrawBox(41,15, 20,8, TermBorder(' '), [term.LIGHTMAGENTA, term.MAGENTA], ' TermBorder( ) ');
+
+        showPrompt();
     }
 
     function matrixDemo() {
@@ -801,7 +857,7 @@ function demoApp() {
             else {
                 color = destColor;
             }
-
+            
             var colorFinal = [color, term.BLACK, term.BOLD];
                
             return [destChr, colorFinal];
@@ -846,6 +902,7 @@ function demoApp() {
         t.Println("minesweeper");
         t.Println("snake");
         t.Println("invocation - bitmap rendering demo");
+        t.Println("boxes - sample for rendering boxes");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 

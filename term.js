@@ -358,7 +358,8 @@ function TermPack(buffer, handler, cursor) {
         Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
         SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
         ShowCursor: ShowCursor, HideCursor: HideCursor,
-        GetRecentRotates:GetRecentRotates
+        GetRecentRotates:GetRecentRotates,
+        DrawBox: DrawBox
     }
     return self;
 
@@ -370,6 +371,10 @@ function TermPack(buffer, handler, cursor) {
         if (useFlush) {
             Flush();
         }
+    }
+
+    function DrawBox(iX, iY, width, height, borders, color, optionalTitle = '') {
+        return TermBoxToBuffer(buffer, iX, iY, width, height, borders, color, optionalTitle);
     }
 
     function CloneBuffer() {
@@ -511,12 +516,35 @@ function TermWrite(buffer,iX,iY,text, textColors=[]) {
 
     for (var i=x;i<topX;i++) {
         line[i] = text.charAt(i-x);
-        for (var j=0;j<textColors.length;j++) {
-            if (textColors[j]) {
-                colorLine[i][j] = textColors[j]; 
-            }    
-        }
+        var colorChar = colorLine[i];
+        TermApplyColor(colorChar, textColors);
     }
+}
+
+function TermApplyColor(colorChar, textColors) {
+    for (var j=0;j<textColors.length;j++) {
+        if (textColors[j]) {
+            colorChar[j] = textColors[j]; 
+        }    
+    }
+}
+
+function TermPutChar(buffer, iX, iY, chr, textColors=[]) {
+    var chars = buffer.chars;
+    var colors = buffer.colors;
+    var y = iY-1;
+    var x = iX-1;
+
+    if (y >= chars.length || y < 0) {
+        return;
+    }
+    var line = chars[y];
+    if (x >= line.length || x < 0) {
+        return;
+    }
+
+    chars[y][x] = chr;
+    TermApplyColor(colors[y][x], textColors);
 }
 
 function TermFlush(handler, buffer) {
@@ -527,7 +555,7 @@ function TermFlush(handler, buffer) {
         for (var x=0;x<80;x++) {
             var each = handler[y][x];
             each.innerHTML = chars[y][x];
-            each.className = cssClassNameFromAnsii(colors[y][x]);
+            each.className = cssClassNameFromAnsi(colors[y][x]);
         }
     }
 }
@@ -551,7 +579,7 @@ function TermCursorTo(cursor, handler, buffer, aX,aY) {
     
     var frontColor = buffer.colors[y][x][0];
     
-    cursor.className = cssClassNameFromAnsii( [frontColor, frontColor]);
+    cursor.className = cssClassNameFromAnsi( [frontColor, frontColor]);
 
 }
 
@@ -575,7 +603,87 @@ function TermToggleVisible(what, forceHidden) {
     }
 }
 
-function cssClassNameFromAnsii(frontAndBackColorAndStyles) {
+function TermBorder(fill=null) {
+    return [
+        '┌','─', '┐',
+        '│',fill,'│',
+        '└','─', '┘'
+    ];
+}
+
+function TermBoxToBuffer(buffer, iX, iY, width, height, borders, color=[], title='') {
+    if (width < 2 || height < 2) {
+        return;
+    }
+
+    var topLeft = borders[0];
+    var top = borders[1];
+    var topRight = borders[2];
+    var left = borders[3];
+    var fill = borders[4];
+    var right = borders[5];
+    var bottomLeft = borders[6];
+    var bottom = borders[7];
+    var bottomRight = borders[8];
+
+    if (topLeft !== null)       TermPutChar(buffer, iX,iY,                   topLeft,    color);
+    if (topRight !== null)      TermPutChar(buffer, iX+width-1, iY,          topRight,   color);
+    if (bottomLeft !== null)    TermPutChar(buffer, iX,iY+height-1,          bottomLeft, color);
+    if (bottomRight !== null)   TermPutChar(buffer, iX+width-1, iY+height-1, bottomRight,color);
+
+    var lineLength = width-2;
+
+    var topLine = [];
+    var middleLine = [];
+    var bottomLine = [];
+
+    if (top !== null) {
+        for (var i=0;i<lineLength;i++) {
+            topLine.push(top);
+        }
+
+        TermWrite(buffer, iX+1, iY, topLine.join(''), color);
+    }
+
+    if (fill !== null) {
+        for (var i=0;i<lineLength;i++) {
+            middleLine.push(fill);
+        }
+
+        var fillLine = middleLine.join('');
+        for (var y=iY+1; y<iY+height-1; y++) {
+            TermWrite(buffer, iX+1, y, fillLine, color);
+        }
+    }
+
+    if (bottom !== null) {
+        for (var i=0;i<lineLength;i++) {
+            bottomLine.push(bottom);
+        }
+
+        TermWrite(buffer, iX+1, iY+height-1, bottomLine.join(''), color);
+    }
+
+    if (left !== null) {
+        for (var y=iY+1; y<iY+height-1;y++) {
+            TermPutChar(buffer, iX, y, left, color);
+        }
+    }
+
+    if (right !== null) {
+        for (var y=iY+1; y<iY+height-1;y++) {
+            TermPutChar(buffer, iX+width-1, y, right, color);
+        }
+    }
+
+    if (title.length > 0) {
+        var showTitle = title.length > (width-2) ? title.substring(0, width-2) : title;
+        var offset = Math.floor( (width-2 - showTitle.length)/2);
+        TermWrite(buffer, offset+iX+1, iY, showTitle, color);
+    }
+}
+
+function cssClassNameFromAnsi(frontAndBackColorAndStyles) {
     var frontColor = "FG-"+ansiToCSS[frontAndBackColorAndStyles[0]];
     var backColor = "BG-"+ansiToCSS[frontAndBackColorAndStyles[1]];
 
