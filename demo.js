@@ -2,7 +2,7 @@ window.addEventListener('load', demoApp);
 
 function demoApp() {
     var history = EchoHistory();
-    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "invocation", "boxes"] ));
+    var hints = EchoHints( EchoHintsProviderList( ["help", "cls", "matrix", "minesweeper", "snake", "invocation", "boxes", "maze"] ));
     var t = TermStart();
     
     t.HoldFlush();
@@ -67,8 +67,44 @@ function demoApp() {
             boxesDemo();
             return false;
         }
+        else if (cmd === "maze") {
+            clearConsole();
+            mazeDemo();
+            return false;
+        }
 
         return true;
+    }
+
+    function mazeDemo() {
+        t.HideCursor();
+        t.HoldFlush();
+        t.DrawBox(1,2,80,20, TermBorder(), [term.WHITE], '  MAP  ');
+        drawMap();
+
+        function drawMap() {
+            var mazeMap = TermBuffer(78,18,term.SMALLDOT);
+            
+            
+            
+            t.PutBuffer(mazeMap,2,3,0,0,78,18);
+
+        }
+
+        window.addEventListener('keydown', onKey);
+
+        function onKey(e) {
+            if ( ["Escape"].indexOf(e.key) != -1) {
+                window.removeEventListener('keydown', onKey);
+                t.ShowCursor();
+                welcomeScreen();
+            }
+            else {
+                drawMap();
+            }
+        }
+
+        t.Flush();
     }
 
     function boxesDemo() {
@@ -892,6 +928,7 @@ function demoApp() {
         t.Println("snake");
         t.Println("invocation - bitmap rendering demo");
         t.Println("boxes - sample for rendering boxes");
+        t.Println("maze - a sample maze game");
         t.Println("##                      ##", [term.WHITE, term.GRAY]);
     }
 

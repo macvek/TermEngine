@@ -10,7 +10,8 @@ var term = {
     LIGHTGRAY   : 37,        WHITE       :97,
     BOLD: 'bold',
     UNDERLINE: 'underline',
-    ITALIC: 'italic'
+    ITALIC: 'italic',
+    SMALLDOT:'·'
 };
 
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
@@ -769,12 +770,12 @@ function consoleBuffer() {
     return TermBuffer(80,24);
 }
 
-function TermBuffer(width,height) {
+function TermBuffer(width,height,chr=' ') {
     var characters = [];
     var colors = [];
 
     for (var y=0;y<height;y++) {
-        var linePair = consoleBufferLine(width);
+        var linePair = consoleBufferLine(width, chr);
         characters.push(linePair[0]);
         colors.push(linePair[1]);
     }
@@ -801,11 +802,11 @@ function consoleBufferRotate(buffer) {
     colors.push(linePair[1]);
 }
 
-function consoleBufferLine(w=80) {
+function consoleBufferLine(w=80, chr=' ') {
     var line = [];
     var colorLine = [];
     for (var x=0;x<w;x++) {
-        line.push(' ');
+        line.push(chr);
         colorLine.push([term.LIGHTGRAY,term.BLACK]);
     }
 
