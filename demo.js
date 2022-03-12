@@ -7,8 +7,8 @@ function demoApp() {
     
     t.HoldFlush();
 
-    welcomeScreen();
-
+    //welcomeScreen();
+    mazeDemo();
     function welcomeScreen() {
         clearConsole();
         t.Print("Welcome to ");
@@ -77,34 +77,182 @@ function demoApp() {
     }
 
     function mazeDemo() {
+        var playerXY = [20,10];
+        var maze = buildMaze();
+
         t.HideCursor();
         t.HoldFlush();
-        t.DrawBox(1,2,80,20, TermBorder(), [term.WHITE], '  MAP  ');
+        t.DrawBox(1,2,80,20, TermBorder(), [term.WHITE], '  Arrows to move; G to randomize; H to Home ');
+        
         drawMap();
+
+        window.addEventListener('keydown', onKey);
+        t.Flush();
 
         function drawMap() {
             var mazeMap = TermBuffer(78,18,term.SMALLDOT);
-            
-            
-            
-            t.PutBuffer(mazeMap,2,3,0,0,78,18);
+            drawMaze(mazeMap);
+            TermPutChar(mazeMap, 1 + playerXY[0], 1 + playerXY[1], '@');
 
+            t.PutBuffer(mazeMap,2,3,0,0,78,18);
         }
 
-        window.addEventListener('keydown', onKey);
+        function drawMaze(buffer) {
+            var steps = maze.steps;
+            for (var y=0;y<steps.length;y++) {
+                var row = steps[y];
+                for (var x=0;x<row.length;x++) {
+                    var each = steps[y][x];
+                    if (each) {
+                        var chr;
+                        if (each.type === 'roomFloor') {
+                            chr = 'x';
+                        }
+                        else if (each.type === 'jointFloor') {
+                            chr = '.';
+                        }
+                        TermPutChar(buffer, 1 + x, 1 + y, chr);
+                    }
+                }
+            }
+        }
 
         function onKey(e) {
             if ( ["Escape"].indexOf(e.key) != -1) {
                 window.removeEventListener('keydown', onKey);
                 t.ShowCursor();
                 welcomeScreen();
+                return;
             }
-            else {
-                drawMap();
+            if ( ["ArrowUp"].indexOf(e.key) != -1) { --playerXY[1]; }
+            if ( ["ArrowDown"].indexOf(e.key) != -1) { ++playerXY[1]; }
+            if ( ["ArrowLeft"].indexOf(e.key) != -1) { --playerXY[0]; }
+            if ( ["ArrowRight"].indexOf(e.key) != -1) { ++playerXY[0]; }
+
+            boundPlayerXY();
+            drawMap();
+        }
+
+        function buildMaze() {
+            var maze = {
+                h:18, w:78,
+                steps: 'will be filled by compileSteps',
+                rooms: [],
+                joints:[],
+            };
+
+            var roomA = createRoom(3,3,6,6,[[5,5]]);
+            var roomB = createRoom(30,10, 10,6, [[0,3]]);
+
+            debugger;
+            var jointAB = createJoint(roomA.entries[0], roomB.entries[0]);
+            
+            maze.rooms.push(roomA);
+            maze.rooms.push(roomB);
+            maze.joints.push(jointAB);
+
+            compileSteps(maze);
+            return maze;
+        }
+
+        function compileSteps(inMaze) {
+            var steps = [];
+            for (var i=0;i<inMaze.h;i++) {
+                steps.push(new Array(inMaze.w));
+            }
+
+            for (var i=0;i<inMaze.rooms.length;i++) {
+                fillRoom(inMaze.rooms[i]);
+            }
+            for (var i=0;i<inMaze.joints.length;i++) {
+                fillJoint(inMaze.joints[i]);
+            }
+
+            inMaze.steps = steps;
+
+            function fillRoom(room) {
+                for (var y=0;y<room.h;y++) {
+                    for (var x=0;x<room.w;x++) {
+                        steps[y+room.y][x+room.x] = {type:'roomFloor'};
+                    }
+                }
+            }
+
+            function fillJoint(joint) {
+                var start = joint.a;
+                var end = joint.b;
+
+                var cursor = start;
+                var diffY = end[1] - start[1];
+                var diffX = end[0] - start[0];
+                
+                var dir = [];
+                dir[0] = diffX > 0 ? 1 : diffX < 0 ? -1 : 0;
+                dir[1] = diffY > 0 ? 1 : diffY < 0 ? -1 : 0;
+
+                while(evenY());
+                while(evenX());
+
+
+                function even(idx) {
+                    if (cursor[idx] === end[idx]) {
+                        return false;
+                    }
+
+                    cursor[idx] += dir[idx];
+                    steps[cursor[1]][cursor[0]] = {type:'jointFloor'};
+
+                    return true;
+                }
+
+                function evenY() {
+                    return even(1);
+                }
+
+                function evenX() {
+                    return even(0);
+                }
+                
+            }
+
+            function allEmptyNeighbours(iX,iY) {
+                var pairs = [];
+                for (var y=-1;y<=1;y++)
+                for (var x=-1;x<=1;x++) {
+                    var calcY = y+iY;
+                    var calcX = x+iX;
+
+                    if (calcY >= 0 && calcY < inMaze.h && calcX >= 0 && calcX < inMaze.w) {
+                        var lookup = steps[y][x];
+                        if (!lookup) {
+                            pairs.push([x,y]);
+                        }
+                    }
+                }
+
+                return pairs;
             }
         }
 
-        t.Flush();
+        function createRoom(x,y, width, height, entries) {
+            var nEntries = [];
+            for (var i=0;i<entries.length;i++) {
+                var each = entries[i];
+                nEntries.push([each[0]+x, each[1]+y]);
+            }
+
+            return { type:'room', x:x,y:y, w:width, h:height, entries:nEntries};
+        }
+
+        function createJoint(a,b) {
+            return {type:'joint', a:a, b:b};
+        }        
+
+        function boundPlayerXY() {
+            playerXY[0] = boundIn(0,playerXY[0],77);
+            playerXY[1] = boundIn(0,playerXY[1],17);
+        }
+        
     }
 
     function boxesDemo() {
