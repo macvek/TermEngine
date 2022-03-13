@@ -180,43 +180,46 @@ function demoApp() {
             function fillJoint(joint) {
                 var start = joint.a;
                 var end = joint.b;
-
-                var cursor = start;
-                var diffY = end[1] - start[1];
-                var diffX = end[0] - start[0];
                 
-                var dir = [];
-                dir[0] = diffX > 0 ? 1 : diffX < 0 ? -1 : 0;
-                dir[1] = diffY > 0 ? 1 : diffY < 0 ? -1 : 0;
+                var path = findPath(start,end);
+                for (var i=0;i<path.length;i++) {
+                    var y = path[i][1];
+                    var x = path[i][0];
 
-                while(evenY());
-                while(evenX());
+                    steps[y][x] = { type: 'jointFloor' };
+                }
+            }
 
+            function findPath(start, end) {
+                var path = [];
+                var cursor = start;
+                var dir = xyDirection(start, end);
+                if (dir[0] == 0 && dir[1] == 0) {
+                    return [];
+                }
 
-                function even(idx) {
-                    if (cursor[idx] === end[idx]) {
+                while(moveAxis(1));
+                while(moveAxis(0));
+
+                function moveAxis(idx) {
+                    if (cursor[idx] !== end[idx]) {
+                        cursor[idx] += dir[idx];
+                        path.push([].concat(cursor));
+                        return true;
+                    }
+                    else {
                         return false;
                     }
-
-                    cursor[idx] += dir[idx];
-
-                    var y = cursor[1];
-                    var x = cursor[0];
-                    if (!steps[y][x]) {
-                        steps[y][x] = {type:'jointFloor'};
-                    }
-
-                    return true;
                 }
 
-                function evenY() {
-                    return even(1);
-                }
-
-                function evenX() {
-                    return even(0);
-                }
-                
+                return path;
+            }
+           
+            function xyDirection(start, end) {
+                return [
+                    end[0] > start[0] ? 1 : end[0] < start[0] ? -1 : 0,
+                    end[1] > start[1] ? 1 : end[1] < start[1] ? -1 : 0
+                ];
             }
 
             function allEmptyNeighbours(iX,iY) {
