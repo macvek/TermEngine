@@ -109,7 +109,7 @@ function demoApp() {
                             chr = 'x';
                         }
                         else if (each.type === 'jointFloor') {
-                            chr = '.';
+                            chr = 'O';
                         }
                         TermPutChar(buffer, 1 + x, 1 + y, chr);
                     }
@@ -144,7 +144,6 @@ function demoApp() {
             var roomA = createRoom(3,3,6,6,[[5,5]]);
             var roomB = createRoom(30,10, 10,6, [[0,3]]);
 
-            debugger;
             var jointAB = createJoint(roomA.entries[0], roomB.entries[0]);
             
             maze.rooms.push(roomA);
@@ -200,7 +199,12 @@ function demoApp() {
                     }
 
                     cursor[idx] += dir[idx];
-                    steps[cursor[1]][cursor[0]] = {type:'jointFloor'};
+
+                    var y = cursor[1];
+                    var x = cursor[0];
+                    if (!steps[y][x]) {
+                        steps[y][x] = {type:'jointFloor'};
+                    }
 
                     return true;
                 }
