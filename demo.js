@@ -190,16 +190,29 @@ function demoApp() {
                 }
             }
 
-            function findPath(start, end) {
-                var path = [];
+            function findPath(aEntry, bEntry) {
+                var start = jointCandidate(aEntry);
+                var end = jointCandidate(bEntry);
+
+                if (!start || !end) {
+                    return [];
+                }
+
                 var cursor = start;
                 var dir = xyDirection(start, end);
                 if (dir[0] == 0 && dir[1] == 0) {
                     return [];
                 }
+                var path = [ [].concat(start) ];
 
-                while(moveAxis(1));
-                while(moveAxis(0));
+                var diffX = Math.abs(end[0] - start[0]);
+                var diffY = Math.abs(end[1] - start[1]);
+
+                var first = diffX > diffY ? 1 : 0;
+                var snd = diffX > diffY ? 0 : 1;
+
+                while(moveAxis(first));
+                while(moveAxis(snd));
 
                 function moveAxis(idx) {
                     if (cursor[idx] !== end[idx]) {
@@ -222,22 +235,25 @@ function demoApp() {
                 ];
             }
 
-            function allEmptyNeighbours(iX,iY) {
-                var pairs = [];
-                for (var y=-1;y<=1;y++)
-                for (var x=-1;x<=1;x++) {
-                    var calcY = y+iY;
-                    var calcX = x+iX;
+            function jointCandidate(xy) {
+                var lookups = [
+                    [0,0], 
+                    [0,-1],[1,0],[0,1],[-1,0],
+                    [-1,-1],[1,-1],[1,1],[-1,1]
+                ];
 
-                    if (calcY >= 0 && calcY < inMaze.h && calcX >= 0 && calcX < inMaze.w) {
-                        var lookup = steps[y][x];
-                        if (!lookup) {
-                            pairs.push([x,y]);
-                        }
+                for (var i=0;i<lookups.length;i++) {
+                    var each = lookups[i];
+                    var x = each[0] + xy[0];
+                    var y = each[1] + xy[1];
+                    
+                    if (!steps[y][x]) {
+                        return [x,y];
                     }
+
                 }
 
-                return pairs;
+                return false;
             }
         }
 
