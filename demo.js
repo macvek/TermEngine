@@ -7,8 +7,7 @@ function demoApp() {
     
     t.HoldFlush();
 
-    //welcomeScreen();
-    mazeDemo();
+    welcomeScreen();
     function welcomeScreen() {
         clearConsole();
         t.Print("Welcome to ");
