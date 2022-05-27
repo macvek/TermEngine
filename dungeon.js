@@ -8,10 +8,11 @@ function dungeon() {
     var map = initMap();
 
     window.addEventListener('keydown', onPlayerMove);
-    var player = dynamicObject('Player');
-    var monster = dynamicObject('Monster');
-    map.positions.put([1,1], player);
-    map.positions.put([3,3], monster);
+    var player = dynamicObject('@','Player');
+
+    map.put([1,1], player);
+    map.put([3,3], dynamicObject('Y','Monster'));
+    
     inLevelWalk();
     window.debugMap = map;
 
@@ -21,9 +22,10 @@ function dungeon() {
         redraw();
     }
 
-    function dynamicObject(name) {
+    function dynamicObject(symbol, name) {
         return {
             pos: [-1,-1],
+            symbol:symbol,
             name: name
         }
     }
@@ -33,7 +35,15 @@ function dungeon() {
         return {
             bounds:{ minX:1, maxX:80, minY:1, maxY:24 },
             objects: [],
-            positions: indexedObjects()
+            positions: indexedObjects(),
+            put: function(where, what) {
+                this.objects.push(what);
+                this.positions.put(where, what)
+            },
+            remove: function(what) {
+                arrayDrop(this.objects, what);
+                this.positions.remove(what);
+            }
         }
     }
 
@@ -69,15 +79,15 @@ function dungeon() {
                 what.pos = pos;
             },
             move: function(pos,what) {
-                var previousList = this.get(what.pos);
-                arrayDrop(previousList, what);
+                this.remove(what);
                 this.put(pos, what);
+            },
+            remove: function(what) {
+                var list = this.get(what.pos);
+                arrayDrop(list, what);
             }
         }
-
     }
-
-    
 
 
     function mapInBounds(pos) {
@@ -102,19 +112,48 @@ function dungeon() {
 
     }
 
-    function gameTurnMove(newPos) {
+    function movePlayer(ox, oy) {
+        var newPos = [player.pos[0]+ox, player.pos[1]+oy];
         if (mapInBounds(newPos)) {
-            map.positions.move(newPos, player);
+            playerTurnMove(newPos);
+            nextTurn();
         }
+    }
 
+    function playerTurnMove(newPos) {
+        var destination = map.positions.get(newPos);
+        var victims = [].concat(destination);
+        for (var each of victims) {
+            map.positions.remove(each);
+            arrayDrop(map.objects, each);
+        }
+        
+        map.positions.move(newPos, player);
+    }
+
+    function nextTurn() {
+        for (var each of map.objects) {
+            if (each !== player) {
+                monsterTurnMove(each);
+            }
+        }
+        spawnRandomMonster();
+        redraw();
+    }
+
+    function monsterTurnMove(monster) {
         var offset = [randomOf([-1,0,1]), randomOf([-1,0,1])];
         var newMonsterPos = [monster.pos[0] + offset[0], monster.pos[1] + offset[1]];
-
         if (mapInBounds(newMonsterPos)) {
             map.positions.move(newMonsterPos, monster);
         }
+    }
 
-        redraw();
+    function spawnRandomMonster() {
+        if (0.1 > Math.random()) {
+            var nextMonster = dynamicObject(randomOf(['Y','Z','A']), 'Monster');
+            map.put([randomRange(5,75), randomRange(5,20)], nextMonster);
+        }
     }
    
     function redraw() {
@@ -124,13 +163,12 @@ function dungeon() {
         t.Flush();
     }
 
-    function movePlayer(ox, oy) {
-        gameTurnMove([player.pos[0]+ox, player.pos[1]+oy]);
-    }
+   
 
     function drawObjects() {
-        t.PutCharXY(player.pos[0], player.pos[1], '@');
-        t.PutCharXY(monster.pos[0], monster.pos[1], 'Y');
+        for (var each of map.objects) {
+            t.PutCharXY(each.pos[0], each.pos[1], each.symbol);
+        }
     }
 
     function clearConsole() {
@@ -159,6 +197,10 @@ function dungeon() {
     function randomOf(list) {
         var idx = Math.floor(list.length * Math.random());
         return list[idx];
+    }
+
+    function randomRange(from, to) {
+        return from + Math.floor((to-from) * Math.random());
     }
 
 }
