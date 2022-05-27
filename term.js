@@ -357,7 +357,8 @@ function TermPack(buffer, handler, cursor) {
         PutBuffer: PutBuffer,
         CloneBuffer,CloneBuffer,
         Print: Print, Println: Println, HoldFlush: HoldFlush, GetCursorXY: GetCursorXY, 
-        SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, Flush: Flush,
+        SetCursorXY: SetCursorXY, GetCharXY:GetCharXY, GetColorXY:GetColorXY, 
+        PutCharXY, PutCharXY, PutColorXY: PutColorXY, Flush: Flush,
         ShowCursor: ShowCursor, HideCursor: HideCursor,
         GetRecentRotates:GetRecentRotates,
         DrawBox: DrawBox
@@ -416,6 +417,20 @@ function TermPack(buffer, handler, cursor) {
 
     function GetCursorXY() {
         return [].concat(cursorPos);
+    }
+
+    function PutCharXY(x,y,chr) {
+        buffer.chars[y-1][x-1] = chr;
+        if (useFlush) {
+            Flush();
+        }
+    }
+
+    function PutColorXY(x,y,color) {
+        buffer.colors[y-1][x-1] = color;   
+        if (useFlush) {
+            Flush();
+        }
     }
 
     function HoldFlush() {
