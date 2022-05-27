@@ -9,7 +9,9 @@ function dungeon() {
 
     window.addEventListener('keydown', onPlayerMove);
     var player = dynamicObject('Player');
+    var monster = dynamicObject('Monster');
     map.positions.put([1,1], player);
+    map.positions.put([3,3], monster);
     inLevelWalk();
     window.debugMap = map;
 
@@ -104,13 +106,21 @@ function dungeon() {
         if (mapInBounds(newPos)) {
             map.positions.move(newPos, player);
         }
+
+        var offset = [randomOf([-1,0,1]), randomOf([-1,0,1])];
+        var newMonsterPos = [monster.pos[0] + offset[0], monster.pos[1] + offset[1]];
+
+        if (mapInBounds(newMonsterPos)) {
+            map.positions.move(newMonsterPos, monster);
+        }
+
         redraw();
     }
    
     function redraw() {
         t.HoldFlush();
         clearConsole();
-        drawPlayer();
+        drawObjects();
         t.Flush();
     }
 
@@ -118,8 +128,9 @@ function dungeon() {
         gameTurnMove([player.pos[0]+ox, player.pos[1]+oy]);
     }
 
-    function drawPlayer() {
+    function drawObjects() {
         t.PutCharXY(player.pos[0], player.pos[1], '@');
+        t.PutCharXY(monster.pos[0], monster.pos[1], 'Y');
     }
 
     function clearConsole() {
@@ -143,6 +154,11 @@ function dungeon() {
         if (idx > -1) {
             arr.splice(idx,1);
         }
+    }
+
+    function randomOf(list) {
+        var idx = Math.floor(list.length * Math.random());
+        return list[idx];
     }
 
 }
