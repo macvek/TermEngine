@@ -3,18 +3,22 @@ window.addEventListener('load', dungeon);
 function dungeon() {
     var t = TermStart();
     var Focuses = toAtoms(['PLAYER'])
+    var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
 
     let keyFocus = Focuses.PLAYER;
     var map = initMap();
 
     window.addEventListener('keydown', onPlayerMove);
-    var player = dynamicObject('@','Player');
+    var player = EntityPlayer();
 
     map.put([1,1], player);
-    map.put([3,3], dynamicObject('Y','Monster'));
+    map.put([3,3], EntityMonster());
+
+    for (var i=5;i<=10;i++) {
+        map.put([i,5], EntityWall());
+    }
     
     inLevelWalk();
-    window.debugMap = map;
 
     function inLevelWalk() {
         t.HideCursor();
@@ -22,11 +26,29 @@ function dungeon() {
         redraw();
     }
 
-    function dynamicObject(symbol, name) {
+    function EntityPlayer() {
+        return dynamicObject('@','Player', activatePlayer);
+    }
+
+    function EntityMonster() {
+        return dynamicObject('B', 'Monster', activateAttack, monsterTurn);
+    }
+
+    function EntityZombie() {
+        return dynamicObject('U', 'Zombie', activateAttack, zombieTurn);
+    }
+
+    function EntityWall() {
+        return dynamicObject('#', 'Wall', activateAbort);
+    }
+
+    function dynamicObject(symbol, name, onActivate, onTurn) {
         return {
             pos: [-1,-1],
             symbol:symbol,
-            name: name
+            name: name,
+            onActivate: onActivate,
+            onTurn: onTurn
         }
     }
 
@@ -97,62 +119,147 @@ function dungeon() {
 
     function onPlayerMove(e) {
         if (keyFocus != Focuses.PLAYER) return;
-        if ("ArrowDown" === e.key) {
+        if ("ArrowDown" === e.key || "2" === e.key)  {
             movePlayer(0,1);
         }
-        else if ("ArrowUp" === e.key) {
+        else if ("ArrowUp" === e.key || "8" === e.key) {
             movePlayer(0,-1);
         }
-        else if ("ArrowLeft" === e.key) {
+        else if ("ArrowLeft" === e.key || "4" === e.key) {
             movePlayer(-1,0);
         }
-        else if ("ArrowRight" === e.key) {
+        else if ("ArrowRight" === e.key || "6" === e.key) {
             movePlayer(1,0);
         }
-
+        else if ("7" === e.key) {
+            movePlayer(-1,-1);
+        }
+        else if ("9" === e.key) {
+            movePlayer( 1,-1);
+        }
+        else if ("1" === e.key) {
+            movePlayer(-1, 1);
+        }
+        else if ("3" === e.key) {
+            movePlayer( 1, 1);
+        }
+        else if ("5" === e.key) {
+            movePlayer( 0, 0);
+        }
     }
 
     function movePlayer(ox, oy) {
         var newPos = [player.pos[0]+ox, player.pos[1]+oy];
-        if (mapInBounds(newPos)) {
-            playerTurnMove(newPos);
-            nextTurn();
+        
+        if (ActivateResults.ABORT === playerTurnMove(newPos)) {
+            return;
+        }
+        nextTurn();
+    }
+
+    function activatePlayer(self, other) {
+        if (other.onPlayerActivate) {
+            return other.onPlayerActivate(self,other);
+        }
+        else {
+            return activateAbort();
         }
     }
 
+    function activateAttack(self, other) {
+        if (other === player) {
+            map.remove(self);
+            return ActivateResults.MOVE;
+        }
+        else {
+            return ActivateResults.STOP;
+        }
+    }
+
+    function activateAbort() {
+        return ActivateResults.ABORT;
+    }
+
+    function randomMove(ent) {
+        var offset = [randomOf([-1,0,1]), randomOf([-1,0,1])];
+        var newMonsterPos = [ent.pos[0] + offset[0], ent.pos[1] + offset[1]];
+        entityMove(ent, newMonsterPos);
+    }
+
     function playerTurnMove(newPos) {
+        return entityMove(player, newPos);
+    }
+
+    function entityMove(ent, newPos) {
+        if (!mapInBounds(newPos)) {
+            return ActivateResults.ABORT;
+        }
+
+        if (arrayEquals(ent.pos, newPos)) {
+            return ActivateResults.STOP;
+        }
         var destination = map.positions.get(newPos);
-        var victims = [].concat(destination);
-        for (var each of victims) {
-            map.positions.remove(each);
-            arrayDrop(map.objects, each);
+        var destSubjects = [].concat(destination);
+        var canMove = true;
+        var canAbort = true;
+        for (var subject of destSubjects) {
+            if (subject.onActivate) {
+                var activateResult = subject.onActivate(subject, ent);
+                if (canAbort && activateResult == ActivateResults.ABORT) {
+                    return ActivateResults.ABORT;
+                }
+                else {
+                    canAbort = false;
+                }
+                
+                if (activateResult == ActivateResults.STOP) {
+                    canMove = false;
+                }
+                
+            }
         }
         
-        map.positions.move(newPos, player);
+        if (canMove) {
+            map.positions.move(newPos, ent);
+        }
     }
 
     function nextTurn() {
         for (var each of map.objects) {
-            if (each !== player) {
-                monsterTurnMove(each);
+            if (each.onTurn) {
+                var callback = each.onTurn;
+                callback(each);
             }
         }
         spawnRandomMonster();
         redraw();
     }
 
-    function monsterTurnMove(monster) {
-        var offset = [randomOf([-1,0,1]), randomOf([-1,0,1])];
-        var newMonsterPos = [monster.pos[0] + offset[0], monster.pos[1] + offset[1]];
-        if (mapInBounds(newMonsterPos)) {
-            map.positions.move(newMonsterPos, monster);
+    function monsterTurn(ent) {
+        randomMove(ent);
+    }
+
+    function zombieTurn(ent) {
+        var body = initProp(ent, 'body', {nextMove:3});
+        if (--body.nextMove == 0) {
+            body.nextMove = 3;
+            randomMove(ent);
+        }
+
+        if (ent.symbol === ent.symbol.toUpperCase()) {
+            ent.symbol = ent.symbol.toLowerCase();
+        }
+        else {
+            ent.symbol = ent.symbol.toUpperCase();
         }
     }
 
     function spawnRandomMonster() {
         if (0.1 > Math.random()) {
-            var nextMonster = dynamicObject(randomOf(['Y','Z','A']), 'Monster');
-            map.put([randomRange(5,75), randomRange(5,20)], nextMonster);
+            var newPos = [randomRange(5,75), randomRange(5,20)];
+            if (!map.positions.get(newPos).length) {
+                map.put(newPos, EntityZombie());
+            }
         }
     }
    
@@ -162,8 +269,6 @@ function dungeon() {
         drawObjects();
         t.Flush();
     }
-
-   
 
     function drawObjects() {
         for (var each of map.objects) {
@@ -201,6 +306,30 @@ function dungeon() {
 
     function randomRange(from, to) {
         return from + Math.floor((to-from) * Math.random());
+    }
+
+    function arrayEquals(a,b) {
+        if (a.length != b.length) {
+            return false;
+        }
+
+        for (var i=0;i<a.length;i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function initProp(obj, name, value) {
+        if (!obj[name]) {
+            obj[name] = value;
+            return value;
+        }
+        else {
+            return obj[name];
+        }
     }
 
 }
