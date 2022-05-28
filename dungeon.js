@@ -11,13 +11,12 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
-    map.put([1,1], player);
     drawOnMap([
         "                                                                                ",
         "        ########                                                                ",
         "        #                                                                       ",
         "        #     ##                                                                ",
-        "        #     #                                                                 ",
+        "        #     #                       @                  S                      ",
         "        #######                                                                 ",
         "                                                                                ",
         "                                                                                ",
@@ -56,6 +55,12 @@ function dungeon() {
             if ("#" === chr) {
                 ent = EntityWall();
             }
+            else if ("@" === chr) {
+                ent = player;
+            }
+            else if ("S" === chr) {
+                ent = EntityZombieSpawn();
+            }
 
             if (ent) {
                 map.put(pos, ent);
@@ -77,6 +82,10 @@ function dungeon() {
 
     function EntityWall() {
         return dynamicObject('#', 'Wall', activateAbort);
+    }
+    
+    function EntityZombieSpawn() {
+        return dynamicObject(null, 'ZombieSpawn', activateMove, zombieSpawnTurn);
     }
 
     function dynamicObject(symbol, name, onActivate, onTurn) {
@@ -217,6 +226,10 @@ function dungeon() {
         return ActivateResults.ABORT;
     }
 
+    function activateMove() {
+        return ActivateResults.MOVE;
+    }
+
     function randomMove(ent) {
         var offset = [randomOf([-1,0,1]), randomOf([-1,0,1])];
         var newMonsterPos = [ent.pos[0] + offset[0], ent.pos[1] + offset[1]];
@@ -268,7 +281,6 @@ function dungeon() {
                 callback(each);
             }
         }
-        spawnRandomMonster();
         redraw();
     }
 
@@ -291,15 +303,16 @@ function dungeon() {
         }
     }
 
-    function spawnRandomMonster() {
-        if (0.1 > Math.random()) {
-            var newPos = [randomRange(5,75), randomRange(5,20)];
-            if (!map.positions.get(newPos).length) {
-                map.put(newPos, EntityZombie());
-            }
+    function zombieSpawnTurn(spawnPoint) {
+        var timeout = 20;
+        var body = initProp(spawnPoint, 'body', {timeout:10});
+
+        if ( --body.timeout < 0) {
+            map.put(spawnPoint.pos, EntityZombie());
+            body.timeout = timeout;
         }
     }
-   
+
     function redraw() {
         t.HoldFlush();
         clearConsole();
@@ -309,7 +322,9 @@ function dungeon() {
 
     function drawObjects() {
         for (var each of map.objects) {
-            t.PutCharXY(each.pos[0], each.pos[1], each.symbol);
+            if (each.symbol) {
+                t.PutCharXY(each.pos[0], each.pos[1], each.symbol);
+            }
         }
     }
 
