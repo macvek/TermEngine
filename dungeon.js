@@ -32,7 +32,7 @@ function dungeon() {
         "                                                                                ",
         "                                                                                ",
         "                                                                                ",
-        "                                                       #########################",
+        "        B                                              #########################",
         "                                                       #                        ",
         "                                                       #                        ",
         "                                                       #                        ",
@@ -61,6 +61,9 @@ function dungeon() {
             else if ("S" === chr) {
                 ent = EntityZombieSpawn();
             }
+            else if ("B" === chr) {
+                ent = EntityMonsterSpawn();
+            }
 
             if (ent) {
                 map.put(pos, ent);
@@ -86,6 +89,10 @@ function dungeon() {
     
     function EntityZombieSpawn() {
         return dynamicObject(null, 'ZombieSpawn', activateMove, zombieSpawnTurn);
+    }
+
+    function EntityMonsterSpawn() {
+        return dynamicObject(null, 'MonsterSpawn', activateMove, monsterSpawnTurn);
     }
 
     function dynamicObject(symbol, name, onActivate, onTurn) {
@@ -309,6 +316,16 @@ function dungeon() {
 
         if ( --body.timeout < 0) {
             map.put(spawnPoint.pos, EntityZombie());
+            body.timeout = timeout;
+        }
+    }
+
+    function monsterSpawnTurn(spawnPoint) {
+        var timeout = 40;
+        var body = initProp(spawnPoint, 'body', {timeout:3});
+
+        if ( --body.timeout < 0) {
+            map.put(spawnPoint.pos, EntityMonster());
             body.timeout = timeout;
         }
     }
