@@ -12,18 +12,55 @@ function dungeon() {
     var player = EntityPlayer();
 
     map.put([1,1], player);
-    map.put([3,3], EntityMonster());
+    drawOnMap([
+        "                                                                                ",
+        "        ########                                                                ",
+        "        #                                                                       ",
+        "        #     ##                                                                ",
+        "        #     #                                                                 ",
+        "        #######                                                                 ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                                                ",
+        "                   ########## #####                                             ",
+        "                   #              #                                             ",
+        "                   #              #                                             ",
+        "                   #              #                                             ",
+        "                   ###### #########                                             ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                                                ",
+        "                                                       #########################",
+        "                                                       #                        ",
+        "                                                       #                        ",
+        "                                                       #                        ",
+    ]);
 
-    for (var i=5;i<=10;i++) {
-        map.put([i,5], EntityWall());
-    }
-    
     inLevelWalk();
 
     function inLevelWalk() {
         t.HideCursor();
         clearConsole();
         redraw();
+    }
+
+    function drawOnMap(lines) {
+        for (var y=0;y<lines.length;y++) 
+        for (var x=0;x<lines[y].length;x++) {
+            var chr = lines[y].charAt(x);
+            var pos = [x+1,y+1];
+            var ent = null;
+            if ("#" === chr) {
+                ent = EntityWall();
+            }
+
+            if (ent) {
+                map.put(pos, ent);
+            }
+        }
     }
 
     function EntityPlayer() {
