@@ -361,17 +361,19 @@ function dungeon() {
                 var ptr = [].concat(center);
                 for (var headI = ray; headI < radius; headI++) {
                     ptr = vecAdd(ptr, headWalk);
+                    markBitmap(ptr);
                 }
 
                 for (var tailI = radius-ray; tailI < radius; tailI++ ) {
                     ptr = vecAdd(ptr, tailWalk);
+                    markBitmap(ptr);
                 }
 
-                var rayY = ptr[1];
-                var rayX = ptr[0];
-
-                bitmap[rayY][rayX] = 1;
             }
+        }
+
+        function markBitmap(pos) {
+            bitmap[ pos[1]] [pos[0]] = 1;
         }
 
         
