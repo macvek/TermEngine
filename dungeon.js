@@ -344,76 +344,40 @@ function dungeon() {
 
     function drawLineOfSight() {
         var radius = 5;
-        var center = [radius,radius];
+        
+        var topLeft = [-radius, -radius];
+        var bottomRight = [radius, radius];
 
-        var sideLength = radius*2+1;
-        var bitmap = [];
-        for (var y=0;y<sideLength;y++) {
-            bitmap[y] = [];
-            for (var x=0;x<sideLength;x++) {
-                bitmap[y][x] = 0;
-            }
+        var targets = [];
+        
+        for (var x = topLeft[0]; x<=bottomRight[0];x++) {
+            targets.push( [x, topLeft[1]] );
+            targets.push( [x, bottomRight[1]] );
         }
 
-        var walkers = [ [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0],[-1,-1], [0,-1] ];
-        var walkPairs = [ [0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [6,7], [7,0] ];
-
-        for (var pair of walkPairs) {
-            var headWalk = walkers[pair[0]];
-            var tailWalk = walkers[pair[1]];
-            var blocked = false;
-            for (var ray = 0; ray < radius; ray++) {
-                var ptr = [].concat(center);
-                for (var headI = ray; headI < radius; headI++) {
-                    ptr = vecAdd(ptr, headWalk);
-                    markBitmap(ptr);
-                    if (blocksSightRef(ptr)) {
-                        blocked = true; break;
-                    }
-                }
-
-                for (var tailI = radius-ray; tailI < radius; tailI++ ) {
-                    ptr = vecAdd(ptr, tailWalk);
-                    markBitmap(ptr);
-                    if (blocksSightRef(ptr)) {
-                        blocked = true; break;
-                    }
-                }
-
-                if (blocked) {
-                    break;
-                }
-
-            }
+        for (var y = topLeft[1]+1; y<=bottomRight[1]-1;y++) {
+            targets.push( [topLeft[0], y] );
+            targets.push( [bottomRight[0], y] );
         }
 
-        for (var y=0;y<sideLength;y++)
-        for (var x=0;x<sideLength;x++) {
-            var pos = [x - center[0] + player.pos[0], y - center[1] + player.pos[1]];
-            if (bitmap[y][x] && mapInBounds(pos)) {
+        var translated = [];
+        for (var each of targets) {
+            translated.push(vecAdd(each, player.pos));
+        }
+
+
+        
+        for (var pos of translated) {
+            if (mapInBounds(pos)) {
                 if (t.GetCharXY(pos[0],pos[1]) === ' ') {
                     t.PutCharXY(pos[0],pos[1], specialChars.DOT);
                 }
                 t.PutColorXY(pos[0],pos[1], [term.RED, term.CYAN]);
-            }
+            } 
         }
-
-        function markBitmap(pos) {
-            bitmap[ pos[1]] [pos[0]] = 1;
-        }
-
-        function blocksSightRef(bitmapPos) {
-            var onMapPos = vecDiff( vecAdd(bitmapPos, player.pos), center);
-            var objs = map.positions.get(onMapPos);
-            for (var obj of objs) {
-                if (obj.blocksSight) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        
     }
+
 
     function vecAdd(vecA, vecB) {
         return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
