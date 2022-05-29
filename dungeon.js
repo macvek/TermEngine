@@ -334,7 +334,69 @@ function dungeon() {
         t.HoldFlush();
         clearConsole();
         drawObjects();
+        drawLineOfSight();
         t.Flush();
+    }
+
+    function drawLineOfSight() {
+        var radius = 5;
+        var center = [radius,radius];
+
+        var sideLength = radius*2+1;
+        var bitmap = [];
+        for (var y=0;y<sideLength;y++) {
+            bitmap[y] = [];
+            for (var x=0;x<sideLength;x++) {
+                bitmap[y][x] = 0;
+            }
+        }
+
+        var walkers = [ [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0],[-1,-1], [0,-1] ];
+        var walkPairs = [ [0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [6,7], [7,0] ];
+
+        for (var pair of walkPairs) {
+            var headWalk = walkers[pair[0]];
+            var tailWalk = walkers[pair[1]];
+            for (var ray = 0; ray < radius; ray++) {
+                var ptr = [].concat(center);
+                for (var headI = ray; headI < radius; headI++) {
+                    ptr = vecAdd(ptr, headWalk);
+                }
+
+                for (var tailI = radius-ray; tailI < radius; tailI++ ) {
+                    ptr = vecAdd(ptr, tailWalk);
+                }
+
+                var rayY = ptr[1];
+                var rayX = ptr[0];
+
+                bitmap[rayY][rayX] = 1;
+            }
+        }
+
+        
+        for (var y=0;y<sideLength;y++)
+        for (var x=0;x<sideLength;x++) {
+            var pos = [x - center[0] + player.pos[0], y - center[1] + player.pos[1]];
+            if (bitmap[y][x] && mapInBounds(pos)) {
+                if (t.GetCharXY(pos[0],pos[1]) === ' ') {
+                    t.PutCharXY(pos[0],pos[1], specialChars.DOT);
+                }
+                t.PutColorXY(pos[0],pos[1], [term.RED, term.CYAN]);
+            }
+        }
+    }
+
+    function vecAdd(vecA, vecB) {
+        return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
+    }
+
+    function vecDiff(vecA, vecB) {
+        return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
+    }
+
+    function vecLength(vec) {
+        return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1]);
     }
 
     function drawObjects() {

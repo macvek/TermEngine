@@ -14,6 +14,10 @@ var term = {
     SMALLDOT:'·'
 };
 
+var specialChars = {
+    DOT:'•'
+};
+
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
     term.LIGHTGREEN, term.YELLOW, term.LIGHTYELLOW, term.BLUE, term.LIGHTBLUE, 
     term.MAGENTA, term.LIGHTMAGENTA, term.CYAN, term.LIGHTCYAN, term.LIGHTGRAY, term.WHITE];
