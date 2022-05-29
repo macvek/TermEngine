@@ -84,7 +84,10 @@ function dungeon() {
     }
 
     function EntityWall() {
-        return dynamicObject('#', 'Wall', activateAbort);
+        var wall = dynamicObject('#', 'Wall', activateAbort);
+        wall.blocksSight = true;
+
+        return wall;
     }
     
     function EntityZombieSpawn() {
@@ -101,7 +104,8 @@ function dungeon() {
             symbol:symbol,
             name: name,
             onActivate: onActivate,
-            onTurn: onTurn
+            onTurn: onTurn,
+            blocksSight: false,
         }
     }
 
@@ -357,26 +361,32 @@ function dungeon() {
         for (var pair of walkPairs) {
             var headWalk = walkers[pair[0]];
             var tailWalk = walkers[pair[1]];
+            var blocked = false;
             for (var ray = 0; ray < radius; ray++) {
                 var ptr = [].concat(center);
                 for (var headI = ray; headI < radius; headI++) {
                     ptr = vecAdd(ptr, headWalk);
                     markBitmap(ptr);
+                    if (blocksSightRef(ptr)) {
+                        blocked = true; break;
+                    }
                 }
 
                 for (var tailI = radius-ray; tailI < radius; tailI++ ) {
                     ptr = vecAdd(ptr, tailWalk);
                     markBitmap(ptr);
+                    if (blocksSightRef(ptr)) {
+                        blocked = true; break;
+                    }
+                }
+
+                if (blocked) {
+                    break;
                 }
 
             }
         }
 
-        function markBitmap(pos) {
-            bitmap[ pos[1]] [pos[0]] = 1;
-        }
-
-        
         for (var y=0;y<sideLength;y++)
         for (var x=0;x<sideLength;x++) {
             var pos = [x - center[0] + player.pos[0], y - center[1] + player.pos[1]];
@@ -386,6 +396,22 @@ function dungeon() {
                 }
                 t.PutColorXY(pos[0],pos[1], [term.RED, term.CYAN]);
             }
+        }
+
+        function markBitmap(pos) {
+            bitmap[ pos[1]] [pos[0]] = 1;
+        }
+
+        function blocksSightRef(bitmapPos) {
+            var onMapPos = vecDiff( vecAdd(bitmapPos, player.pos), center);
+            var objs = map.positions.get(onMapPos);
+            for (var obj of objs) {
+                if (obj.blocksSight) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
