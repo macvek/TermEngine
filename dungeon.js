@@ -347,22 +347,38 @@ function dungeon() {
     function drawMesh(rad) {
         var viewMap = buildViewMap(rad);
         var mesh = viewMap.mesh;
+        var queue = [];
         for (var y=0;y<mesh.length;y++) {
             var row = mesh[y];
             for (var x=0;x<row.length;x++) {
                 var routes = mesh[y][x];
                 if (mapInBounds([x+1,y+1])) {
+                    queue.push([x,y]);
                     t.PutCharXY(x+1,y+1, ''+routes.length);
                 }
-                
             }
         }
+
+        var colors = [term.BLUE, term.CYAN, term.RED, term.YELLOW];
+        var idx = 0;
+        setInterval(function() {
+            t.HoldFlush();
+            drawRoute(mesh, queue[idx++ % queue.length], colors[idx % colors.length]);
+            t.Flush();
+        },1000);
+        
     }
 
-    function drawRoute(mesh, x,y) {
-        for (;;) {
-            
+    function drawRoute(mesh, pos,color) {
+        var x = pos[0];
+        var y = pos[1];
+        var points = mesh[y][x];
+        t.PutColorXY(x+1, y+1, [color, term.BLACK]);
+
+        for (var each of points) {
+            drawRoute(mesh, [x+each[0], y+each[1]], color);
         }
+       
     }
 
 
