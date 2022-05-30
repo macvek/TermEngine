@@ -337,18 +337,43 @@ function dungeon() {
     function redraw() {
         t.HoldFlush();
         clearConsole();
-        drawObjects();
-        drawLineOfSight();
+        //drawObjects();
+        //drawLineOfSight();
+
+        drawMesh(10);
         t.Flush();
     }
 
+    function drawMesh(rad) {
+        var viewMap = buildViewMap(rad);
+        var mesh = viewMap.mesh;
+        for (var y=0;y<mesh.length;y++) {
+            var row = mesh[y];
+            for (var x=0;x<row.length;x++) {
+                var routes = mesh[y][x];
+                if (mapInBounds([x+1,y+1])) {
+                    t.PutCharXY(x+1,y+1, ''+routes.length);
+                }
+                
+            }
+        }
+    }
+
+    function drawRoute(mesh, x,y) {
+        for (;;) {
+            
+        }
+    }
+
+
     function drawLineOfSight() {
-        var radius = 4;
+        var radius = 20;
         var viewMap = buildViewMap(radius);
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
 
         for (var y=player.pos[1]-radius;y<=player.pos[1]+radius;y++)
         for (var x=player.pos[0]-radius;x<=player.pos[0]+radius;x++) {
+            
             if (mapInBounds([x,y]) && viewCheck.test([x,y])) {
                 if (t.GetCharXY(x,y) === ' ') {
                     t.PutCharXY(x,y, specialChars.DOT);
@@ -415,9 +440,9 @@ function dungeon() {
                 var inst = mapInstance();
                 inst.center = center;
                 inst.resolver = resolver;
-
                 return inst;
-            }
+            },
+            mesh:mesh
         };
 
         return ret;
