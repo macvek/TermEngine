@@ -343,7 +343,7 @@ function dungeon() {
     }
 
     function drawLineOfSight() {
-        var radius = 5;
+        var radius = 2;
         var viewMap = buildViewMap(radius);
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
 
@@ -359,6 +359,15 @@ function dungeon() {
     }
 
     function buildViewMap(radius) {
+        var center = [radius,radius];
+        var sideLen = radius*2 + 1;
+        
+        var mesh = prep2DimArray(sideLen);
+        for (var y=0;y<sideLen;y++)
+        for (var x=0;x<sideLen;x++) {
+            mesh[y][x] = pickNeighbours([x,y], center);
+        }
+
         var mapInstance = function() {
             return {
                 center: [],
@@ -371,6 +380,7 @@ function dungeon() {
         }
         
         var ret = {
+            staticMesh : mesh,
             newInstance: function(center, resolver) {
                 var inst = mapInstance();
                 inst.center = center;
@@ -382,9 +392,39 @@ function dungeon() {
 
         return ret;
 
+        function pickNeighbours(here, target) {
+            var shortest = vecViewDiff( here, target );
+            var closer = [];
+
+            for (var y=-1;y<=1;y++)
+            for (var x=-1;x<=1;x++) {
+                var step = [x,y];
+                var stepLength = vecViewDistance(step);
+                if (stepLength == 0) {
+                    // skip center field as it will result in a winner for closer.push condition
+                    continue;
+                }
+                
+                var eachPos = [ here[0] + x, here[1] + y];
+                var dist = vecViewDiff( eachPos, target );
+                if (dist+stepLength === shortest) {
+                    closer.push(step);
+                }
+            }
+
+            return closer;
+        }
+
     }
 
+    function prep2DimArray(side) {
+        var ret = [];
+        for (var i=0;i<side;i++) {
+            ret.push([]);
+        }
 
+        return ret;
+    }
     
     function blocksMapSight(pos) {
         for (var each of map.positions.get(pos)) {
@@ -393,6 +433,19 @@ function dungeon() {
             }
         }
         return false;
+    }
+
+    function vecViewDiff(vecA, vecB) {
+        return vecViewDistance(vecDiff(vecA, vecB));
+    }
+    
+    function vecViewDistance(vec) {
+        var absVect = [ Math.abs(vec[0]), Math.abs(vec[1]) ].sort();
+        var low = absVect[0];
+        var high = absVect[1];
+        var fixedMult = 10000;
+
+        return fixedMult*low + high-low;
     }
 
     function vecAdd(vecA, vecB) {
