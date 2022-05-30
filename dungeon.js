@@ -11,6 +11,9 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
+    var radius = 20;
+    var viewMap = buildViewMap(radius);
+
     drawOnMap([
         "                                                                                ",
         "        ########                                                                ",
@@ -337,10 +340,8 @@ function dungeon() {
     function redraw() {
         t.HoldFlush();
         clearConsole();
-        //drawObjects();
-        //drawLineOfSight();
-
-        drawMesh(10);
+        drawObjects();
+        drawLineOfSight();
         t.Flush();
     }
 
@@ -396,10 +397,7 @@ function dungeon() {
 
 
     function drawLineOfSight() {
-        var radius = 20;
-        var viewMap = buildViewMap(radius);
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
-
         for (var y=player.pos[1]-radius;y<=player.pos[1]+radius;y++)
         for (var x=player.pos[0]-radius;x<=player.pos[0]+radius;x++) {
             
@@ -453,12 +451,14 @@ function dungeon() {
                         var isBlocker = this.resolver( neighbour );
                         var canSee = this.test(neighbour);
 
-                        anyTrue = anyTrue | (!isBlocker && canSee);
+                        anyTrue = !isBlocker && canSee;
+                        if (anyTrue) {
+                            break;
+                        }
                     }
 
                     var ret = anyTrue;
                     this.memory[ abY ][ abX ] = ret;
-
                     return ret;
                 }
             }
