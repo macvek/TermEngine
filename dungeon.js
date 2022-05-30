@@ -343,100 +343,49 @@ function dungeon() {
     }
 
     function drawLineOfSight() {
-        var radius = 40;
-        
-        var topLeft = [-radius, -radius];
-        var bottomRight = [radius, radius];
+        var radius = 5;
+        var viewMap = buildViewMap(radius);
+        var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
 
-        var targets = [];
-        
-        for (var x = topLeft[0]; x<=bottomRight[0];x++) {
-            targets.push( [x, topLeft[1]] );
-            targets.push( [x, bottomRight[1]] );
-        }
-
-        for (var y = topLeft[1]+1; y<=bottomRight[1]-1;y++) {
-            targets.push( [topLeft[0], y] );
-            targets.push( [bottomRight[0], y] );
-        }
-
-        var translated = [];
-        for (var each of targets) {
-            translated.push(vecAdd(each, player.pos));
-        }
-
-        var traced = [];
-        for (var each of translated) {
-            traced.push(tracePoints(player.pos, each));
-        }
-
-        var flattenedTrace = [];
-        for (var each of traced) {
-            flattenedTrace = flattenedTrace.concat(each);
-        }
-
-        var uniques = [];
-        if (flattenedTrace.length > 0) {
-            uniques.push(flattenedTrace[0]);
-            for (var i=1;i<flattenedTrace.length;i++) {
-                var each = flattenedTrace[i];
-                if (!arrayEquals(uniques[uniques.length-1], each)) {
-                    uniques.push(each);
+        for (var y=player.pos[1]-radius;y<=player.pos[1]+radius;y++)
+        for (var x=player.pos[0]-radius;x<=player.pos[0]+radius;x++) {
+            if (mapInBounds([x,y]) && viewCheck.test([x,y])) {
+                if (t.GetCharXY(x,y) === ' ') {
+                    t.PutCharXY(x,y, specialChars.DOT);
                 }
-            }
-        }
-
-        var finalList = uniques;
-
-        for (var pos of finalList) {
-            if (mapInBounds(pos)) {
-                if (t.GetCharXY(pos[0],pos[1]) === ' ') {
-                    t.PutCharXY(pos[0],pos[1], specialChars.DOT);
-                }
-                t.PutColorXY(pos[0],pos[1], [term.RED, term.CYAN]);
+                t.PutColorXY(x,y, [term.RED, term.CYAN]);
             } 
         }
     }
 
-    function tracePoints(from, to) {
-        var resolution = 2;
-        var resLimit = 1/resolution;
-        var diff = vecDiff(to, from);
-        var len = vecLength(diff) * resolution;
-        var norm = [diff[0]/len, diff[1]/len];
-
-        var ret = [];
-        var limit = Math.ceil(len);
-        
-        var lastOne = from;
-        for (var i=0;i<limit;i++) {
-            var next = vecAdd(lastOne, norm);
-            var rounded = [
-                Math.round(next[0]),
-                Math.round(next[1])
-            ];
-
-            if (!mapInBounds(rounded)) {
-                break;
+    function buildViewMap(radius) {
+        var mapInstance = function() {
+            return {
+                center: [],
+                resolver: function() {return false;},
+                memory: [],
+                test: function(pos) {
+                    return !this.resolver(pos);
+                }
             }
-
-            ret.push(rounded);
-
-            if (blocksMapSight(rounded)) {
-                break;
-            }
-
-            var eachDiff = vecDiff(next, to);
-            if (Math.sqrt(eachDiff[0]*eachDiff[0] + eachDiff[1]*eachDiff[1]) < resLimit) {
-                break;
-            }
-
-            lastOne = next;
         }
+        
+        var ret = {
+            newInstance: function(center, resolver) {
+                var inst = mapInstance();
+                inst.center = center;
+                inst.resolver = resolver;
+
+                return inst;
+            }
+        };
 
         return ret;
+
     }
 
+
+    
     function blocksMapSight(pos) {
         for (var each of map.positions.get(pos)) {
             if (each.blocksSight) {
