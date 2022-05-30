@@ -361,7 +361,7 @@ function dungeon() {
 
         var colors = [term.BLUE, term.CYAN, term.RED, term.YELLOW];
         var idx = 0;
-        setInterval(function() {
+        if (false)setInterval(function() {
             t.HoldFlush();
             drawRoute(mesh, queue[idx++ % queue.length], colors[idx % colors.length]);
             t.Flush();
@@ -407,6 +407,7 @@ function dungeon() {
         var mesh = prep2DimArray(sideLen);
         for (var y=0;y<sideLen;y++)
         for (var x=0;x<sideLen;x++) {
+            if (x == 6 && y==0) debugger;
             mesh[y][x] = pickNeighbours([x,y], absoluteCenter);
         }
 
@@ -464,28 +465,83 @@ function dungeon() {
         return ret;
 
         function pickNeighbours(here, target) {
-            var shortest = vecViewDiff( here, target );
-            var closer = [];
-
-            for (var y=-1;y<=1;y++)
-            for (var x=-1;x<=1;x++) {
-                var step = [x,y];
-                var stepLength = vecViewDistance(step);
-                if (stepLength == 0) {
-                    // skip center field as it will result in a winner for closer.push condition
-                    continue;
+            if (here[0] === target[0]) {
+                if (here[1] < target[1]) {
+                    return [[0,1]];
                 }
-                
-                var eachPos = [ here[0] + x, here[1] + y];
-                var dist = vecViewDiff( eachPos, target );
-                if (dist+stepLength === shortest) {
-                    closer.push(step);
+                else if (here[1] > target[1]) {
+                    return [[0,-1]];
+                }
+                else {
+                    return [];
                 }
             }
 
-            return closer;
+            var neighbours = closerNeighbours(here, target);
+            
+            var lineStart = vecAdd(here, [0.5, 0.5]);
+            var lineEnd = vecAdd(target, [0.5, 0.5]);
+
+            var line = buildLine(lineStart, lineEnd);
+
+            return lineHitTestList(line, neighbours);
         }
 
+    }
+
+    function closerNeighbours(here, target) {
+        var neighbours = [];
+        for (var y=-1;y<=1;y++)
+        for (var x=-1;x<=1;x++) {
+            if ( !(x == 0 && y == 0) ) {
+                neighbours.push(vecAdd(here, [x,y]));
+            }
+        }
+
+        var hereDist = pointDistance(here, target);
+        var closer = [];
+        for (var each of neighbours) {
+            var eachDist = pointDistance(each, target);
+            if (eachDist < hereDist) {
+                closer.push(each);
+            }
+        }
+
+        return closer;
+    }
+
+    function lineHitTestList(line, boxes) {
+        var ret = [];
+        for (var box of boxes) {
+            if (lineHitTest(line, box)) {
+                ret.push(box);
+            }
+        }
+
+        return ret;
+    }
+
+    function lineHitTest(line, box) {
+        var perpLine = linePerpendicularWithPoint(line, vecAdd([0.5, 0.5], box));
+        var cX = (perpLine.b - line.b) / (line.a - perpLine.a);
+        var cY = line.a * cX + line.b;
+
+        return cX > box[0] && cX < box[0]+1 && cY > box[1] && cY < box[1]+1;
+        
+    }
+
+    function linePerpendicularWithPoint(line, point) {
+        var newA = -1/line.a;
+        return {
+            a: newA,
+            b: point[1] - newA * point[0]
+        }
+    }
+
+    function buildLine(start, end) {
+        var a = ( end[1] - start[1]) / ( end[0] - start[0]);
+        var b = start[1] - a*start[0];
+        return {a:a, b:b};
     }
 
     function prep2DimArray(side) {
@@ -506,25 +562,20 @@ function dungeon() {
         return false;
     }
 
-    function vecViewDiff(vecA, vecB) {
-        return vecViewDistance(vecDiff(vecA, vecB));
-    }
-    
-    function vecViewDistance(vec) {
-        var absVect = [ Math.abs(vec[0]), Math.abs(vec[1]) ].sort();
-        var low = absVect[0];
-        var high = absVect[1];
-        var fixedMult = 10000;
-
-        return fixedMult*low + high-low;
-    }
-
     function vecAdd(vecA, vecB) {
         return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
     }
 
     function vecDiff(vecA, vecB) {
         return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
+    }
+
+    function vecLength(v) {
+        return Math.sqrt(v[0]*v[0]+v[1]*v[1]);
+    }
+
+    function pointDistance(pointA, pointB) {
+        return vecLength(vecDiff(pointA, pointB));
     }
 
     function drawObjects() {
