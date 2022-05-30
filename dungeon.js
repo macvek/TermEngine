@@ -343,7 +343,7 @@ function dungeon() {
     }
 
     function drawLineOfSight() {
-        var radius = 2;
+        var radius = 4;
         var viewMap = buildViewMap(radius);
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
 
@@ -353,34 +353,64 @@ function dungeon() {
                 if (t.GetCharXY(x,y) === ' ') {
                     t.PutCharXY(x,y, specialChars.DOT);
                 }
-                t.PutColorXY(x,y, [term.RED, term.CYAN]);
+                var color = t.GetColorXY(x,y)
+                t.PutColorXY(x,y, [color[0], term.RED]);
             } 
         }
     }
 
     function buildViewMap(radius) {
-        var center = [radius,radius];
+        var absoluteCenter = [radius,radius];
         var sideLen = radius*2 + 1;
         
         var mesh = prep2DimArray(sideLen);
         for (var y=0;y<sideLen;y++)
         for (var x=0;x<sideLen;x++) {
-            mesh[y][x] = pickNeighbours([x,y], center);
+            mesh[y][x] = pickNeighbours([x,y], absoluteCenter);
         }
 
         var mapInstance = function() {
+            var memory = prep2DimArray(sideLen);
+            memory[radius][radius] = true; // center is always visible; terminator for recursion;
+            
             return {
-                center: [],
-                resolver: function() {return false;},
-                memory: [],
-                test: function(pos) {
-                    return !this.resolver(pos);
+                center: ['set by newInstance'],
+                resolver: function() {return ['set by newInstance'];},
+                memory: memory,
+                test: function(testPos) {
+                    var absolutePos = vecAdd(absoluteCenter, vecDiff(testPos, this.center));
+                    
+                    var abX = absolutePos[0];
+                    var abY = absolutePos[1];
+                    
+                    if (abX < 0 || abX >= sideLen || abY < 0 || abY >= sideLen) {
+                        return false;
+                    }
+
+                    var snapshot = this.memory[ abY ][ abX ];
+                    if (typeof snapshot === 'boolean') {
+                        return snapshot;
+                    }
+
+                    var routes = mesh[abY][abX];
+                    var anyTrue = false;
+                    for (var route of routes) {
+                        var neighbour = vecAdd(route, testPos);
+                        var isBlocker = this.resolver( neighbour );
+                        var canSee = this.test(neighbour);
+
+                        anyTrue = anyTrue | (!isBlocker && canSee);
+                    }
+
+                    var ret = anyTrue;
+                    this.memory[ abY ][ abX ] = ret;
+
+                    return ret;
                 }
             }
         }
         
         var ret = {
-            staticMesh : mesh,
             newInstance: function(center, resolver) {
                 var inst = mapInstance();
                 inst.center = center;
@@ -454,11 +484,6 @@ function dungeon() {
 
     function vecDiff(vecA, vecB) {
         return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
-    }
-
-
-    function vecLength(vec) {
-        return Math.sqrt( vec[0]*vec[0] + vec[1]*vec[1]);
     }
 
     function drawObjects() {
