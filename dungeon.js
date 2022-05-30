@@ -348,24 +348,37 @@ function dungeon() {
         var viewMap = buildViewMap(rad);
         var mesh = viewMap.mesh;
         var queue = [];
-        for (var y=0;y<mesh.length;y++) {
-            var row = mesh[y];
-            for (var x=0;x<row.length;x++) {
-                var routes = mesh[y][x];
-                if (mapInBounds([x+1,y+1])) {
-                    queue.push([x,y]);
-                    t.PutCharXY(x+1,y+1, ''+routes.length);
+        var sideLength = mesh.length;
+        for (var i=0;i<sideLength;i++) { if (mapInBounds([i+1,1])) {queue.push([i,0]);} }
+        for (var i=0;i<sideLength;i++) { if (mapInBounds([sideLength,i+1])) {queue.push([sideLength-1,i]);} }
+        for (var i=sideLength-1;i>0;i--) { if (mapInBounds([i+1,sideLength])) {queue.push([i,sideLength-1]);} }
+        for (var i=sideLength-1;i>0;i--) { if (mapInBounds([1,i+1])) {queue.push([0,i]);} }
+        
+        
+
+        function drawMeshValues() {
+            for (var y=0;y<mesh.length;y++) {
+                var row = mesh[y];
+                for (var x=0;x<row.length;x++) {
+                    var routes = mesh[y][x];
+                    if (mapInBounds([x+1,y+1])) {
+                        t.PutCharXY(x+1,y+1, ''+routes.length);
+                    }
                 }
             }
         }
 
-        var colors = [term.BLUE, term.CYAN, term.RED, term.YELLOW];
+        var colors = [term.BLUE,term.RED];
         var idx = 0;
-        if (false)setInterval(function() {
+
+        drawMeshValues();
+        setInterval(function() {
             t.HoldFlush();
+            clearConsole();
+            drawMeshValues();
             drawRoute(mesh, queue[idx++ % queue.length], colors[idx % colors.length]);
             t.Flush();
-        },1000);
+        },500);
         
     }
 
@@ -407,7 +420,6 @@ function dungeon() {
         var mesh = prep2DimArray(sideLen);
         for (var y=0;y<sideLen;y++)
         for (var x=0;x<sideLen;x++) {
-            if (x == 6 && y==0) debugger;
             mesh[y][x] = pickNeighbours([x,y], absoluteCenter);
         }
 
@@ -484,7 +496,7 @@ function dungeon() {
 
             var line = buildLine(lineStart, lineEnd);
 
-            return lineHitTestList(line, neighbours);
+            return lineHitTestList(line, here, neighbours);
         }
 
     }
@@ -494,14 +506,14 @@ function dungeon() {
         for (var y=-1;y<=1;y++)
         for (var x=-1;x<=1;x++) {
             if ( !(x == 0 && y == 0) ) {
-                neighbours.push(vecAdd(here, [x,y]));
+                neighbours.push([x,y]);
             }
         }
 
         var hereDist = pointDistance(here, target);
         var closer = [];
         for (var each of neighbours) {
-            var eachDist = pointDistance(each, target);
+            var eachDist = pointDistance(vecAdd(here, each), target);
             if (eachDist < hereDist) {
                 closer.push(each);
             }
@@ -510,10 +522,10 @@ function dungeon() {
         return closer;
     }
 
-    function lineHitTestList(line, boxes) {
+    function lineHitTestList(line, baseBox, offsetBoxes) {
         var ret = [];
-        for (var box of boxes) {
-            if (lineHitTest(line, box)) {
+        for (var box of offsetBoxes) {
+            if (lineHitTest(line, vecAdd(baseBox, box))) {
                 ret.push(box);
             }
         }
@@ -522,12 +534,16 @@ function dungeon() {
     }
 
     function lineHitTest(line, box) {
-        var perpLine = linePerpendicularWithPoint(line, vecAdd([0.5, 0.5], box));
-        var cX = (perpLine.b - line.b) / (line.a - perpLine.a);
-        var cY = line.a * cX + line.b;
+        if (line.a == 0) {
+            return line.b > box[1] && line.b < box[1]+1;
+        }
+        else {
+            var perpLine = linePerpendicularWithPoint(line, vecAdd([0.5, 0.5], box));
+            var cX = (perpLine.b - line.b) / (line.a - perpLine.a);
+            var cY = line.a * cX + line.b;
 
-        return cX > box[0] && cX < box[0]+1 && cY > box[1] && cY < box[1]+1;
-        
+            return cX > box[0] && cX < box[0]+1 && cY > box[1] && cY < box[1]+1;
+        }
     }
 
     function linePerpendicularWithPoint(line, point) {
