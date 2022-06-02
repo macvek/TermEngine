@@ -11,7 +11,7 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
-    var radius = 10;
+    var radius = 60;
     var viewMap = buildViewMap(radius);
 
     drawOnMap([
@@ -342,69 +342,8 @@ function dungeon() {
         clearConsole();
         drawObjects();
         drawLineOfSight();
-        //drawMesh(radius);
         t.Flush();
     }
-
-    function drawMesh(rad) {
-        var viewMap = buildViewMap(rad);
-        var mesh = viewMap.mesh;
-        var queue = [];
-        var sideLength = mesh.length;
-        for (var i=0;i<sideLength;i++) { if (mapInBounds([i+1,1])) {queue.push([i,0]);} }
-        for (var i=0;i<sideLength;i++) { if (mapInBounds([sideLength,i+1])) {queue.push([sideLength-1,i]);} }
-        for (var i=sideLength-1;i>0;i--) { if (mapInBounds([i+1,sideLength])) {queue.push([i,sideLength-1]);} }
-        for (var i=sideLength-1;i>0;i--) { if (mapInBounds([1,i+1])) {queue.push([0,i]);} }
-        
-        
-
-        function drawMeshValues() {
-            for (var y=0;y<mesh.length;y++) {
-                var row = mesh[y];
-                for (var x=0;x<row.length;x++) {
-                    var vector = mesh[y][x];
-                    if (mapInBounds([x+1,y+1])) {
-                        t.PutCharXY(x+1,y+1, vector.len%10);
-                    }
-                }
-            }
-        }
-
-        var colors = [term.BLUE,term.RED];
-        var idx = 0;
-
-        drawMeshValues();
-        setInterval(function() {
-            t.HoldFlush();
-            clearConsole();
-            drawMeshValues();
-            drawRoute(mesh, queue[idx++ % queue.length], colors[idx % colors.length]);
-            t.Flush();
-        },500);
-        
-    }
-
-    function drawRoute(mesh, pos,color) {
-        var x = pos[0];
-        var y = pos[1];
-        var vector = mesh[y][x];
-        
-        var v = vecApply(vector.v, x => -x);
-        var len = vector.len;
-        var cursor = [].concat(pos);
-
-        for (var i=0;i<len+1;i++) {
-            var point = vecApply(cursor, Math.round);
-           
-            var p = vecAdd(point,[1,1]);
-            if (mapInBounds(p)) {
-                t.PutColorXY(p[0], p[1], [color, term.BLACK]);
-            }
-            cursor = vecAdd(cursor, v);
-        }
-       
-    }
-
 
     function drawLineOfSight() {
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
@@ -575,65 +514,6 @@ function dungeon() {
 
     }
 
-    function closerNeighbours(here, target) {
-        var neighbours = [];
-        for (var y=-1;y<=1;y++)
-        for (var x=-1;x<=1;x++) {
-            if ( !(x == 0 && y == 0) ) {
-                neighbours.push([x,y]);
-            }
-        }
-
-        var hereDist = pointDistance(here, target);
-        var closer = [];
-        for (var each of neighbours) {
-            var eachDist = pointDistance(vecAdd(here, each), target);
-            if (eachDist < hereDist) {
-                closer.push(each);
-            }
-        }
-
-        return closer;
-    }
-
-    function lineHitTestList(line, baseBox, offsetBoxes) {
-        var ret = [];
-        for (var box of offsetBoxes) {
-            if (lineHitTest(line, vecAdd(baseBox, box))) {
-                ret.push([box]);
-            }
-        }
-
-        return ret;
-    }
-
-    function lineHitTest(line, box) {
-        if (line.a == 0) {
-            return line.b > box[1] && line.b < box[1]+1;
-        }
-        else {
-            var perpLine = linePerpendicularWithPoint(line, vecAdd([0.5, 0.5], box));
-            var cX = (perpLine.b - line.b) / (line.a - perpLine.a);
-            var cY = line.a * cX + line.b;
-
-            return cX > box[0] && cX < box[0]+1 && cY > box[1] && cY < box[1]+1;
-        }
-    }
-
-    function linePerpendicularWithPoint(line, point) {
-        var newA = -1/line.a;
-        return {
-            a: newA,
-            b: point[1] - newA * point[0]
-        }
-    }
-
-    function buildLine(start, end) {
-        var a = ( end[1] - start[1]) / ( end[0] - start[0]);
-        var b = start[1] - a*start[0];
-        return {a:a, b:b};
-    }
-
     function prep2DimArray(side, def) {
         var ret = [];
         for (var i=0;i<side;i++) {
@@ -718,10 +598,6 @@ function dungeon() {
     function randomOf(list) {
         var idx = Math.floor(list.length * Math.random());
         return list[idx];
-    }
-
-    function randomRange(from, to) {
-        return from + Math.floor((to-from) * Math.random());
     }
 
     function arrayEquals(a,b) {
