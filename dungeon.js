@@ -408,10 +408,20 @@ function dungeon() {
 
     function drawLineOfSight() {
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
-        var center = vecSubst(player.pos,[radius,radius]);
+        var radPoint = [radius,radius]
+        var center = vecSubst(player.pos, radPoint);
         var max = [radius*2+1, radius*2+1];
 
+
+        if (false) debugScan([ vecAdd(radPoint, [3,2]) ], drawViewAt);
+        if (false) linearScan(max, drawViewAt);
         outboundSpiral(max, drawViewAt);
+
+        function debugScan(cells, onCell) {
+            for (var cell of cells) {
+                onCell(cell[0],cell[1]);
+            }
+        }
 
         function linearScan(boundary, onCell) {
             for (var y=0;y<boundary[1];y++)
@@ -498,27 +508,43 @@ function dungeon() {
                         return snapshot;
                     }
 
-                    var vector = mesh[abY][abX];
-                    var v = vector.v;
-                    var vLen = vector.len;
-
-                    var cursor = [].concat(this.center);
-
-                    for (var i=0;i<vLen;i++) {
-                        cursor = vecAdd(cursor, v);
-                        var point = vecApply(cursor, Math.round);
-                        var isBlocker = this.resolver(point);
-                        if (isBlocker) {
-                            return false;
-                        }
-                        else {
-                            var cachePoint = vecAdd(point, toAbsTranslate);
-                            ++this.memory[cachePoint[1]][cachePoint[0]];
-                        }
+                    var route = traceTo(mesh[abY][abX], this.center, this.resolver);
+                    for (var point of route) {
+                        var cachePoint = vecAdd(point, toAbsTranslate);
+                        ++this.memory[cachePoint[1]][cachePoint[0]];
                     }
 
-                    return true;
-                    
+                    if (route.length == 0) {
+                        return false;
+                    }
+
+                    var lastPoint = route[route.length-1];
+                    return arrayEquals(lastPoint, testPos);
+
+                    function traceTo(vector, startFrom, resolver) {
+                        var vector = mesh[abY][abX];
+                        var v = vector.v;
+                        var vLen = vector.len;
+    
+                        var cursor = [].concat(startFrom);
+                        var route = [];
+                        if (vLen == 0) {
+                            route.push(startFrom);
+                        }
+
+                        for (var i=0;i<vLen;i++) {
+                            cursor = vecAdd(cursor, v);
+                            var point = vecApply(cursor, Math.round);
+                            var isBlocker = resolver(point);
+                            route.push(point);
+                            if (isBlocker) {
+                                break;
+                            }
+                            
+                        }
+
+                        return route;
+                    }
                 }
             }
         }
