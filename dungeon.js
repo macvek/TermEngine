@@ -11,7 +11,7 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
-    var radius = 20;
+    var radius = 10;
     var viewMap = buildViewMap(radius);
 
     drawOnMap([
@@ -408,8 +408,48 @@ function dungeon() {
 
     function drawLineOfSight() {
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
-        for (var y=player.pos[1]-radius;y<=player.pos[1]+radius;y++)
-        for (var x=player.pos[0]-radius;x<=player.pos[0]+radius;x++) {
+        var center = vecSubst(player.pos,[radius,radius]);
+        var max = [radius*2+1, radius*2+1];
+
+        outboundSpiral(max, drawViewAt);
+
+        function linearScan(boundary, onCell) {
+            for (var y=0;y<boundary[1];y++)
+            for (var x=0;x<boundary[0];x++) {
+                onCell(x,y);
+            }   
+        }
+
+        function outboundSpiral(boundary, onCell) {
+            var left = 0;
+            var top = 0;
+            var right = boundary[0]-1;
+            var bottom = boundary[1]-1;
+
+            for(;;) {
+                for (var i=left;i<=right;i++) onCell(i,top);
+                ++top;
+
+                for (var i=top;i<=bottom;i++) onCell(right, i);
+                --right;
+
+                for (var i=right; i >= left; i--) onCell(i, bottom);
+                --bottom;
+
+                for (var i=bottom; i >= top; i--) onCell(left, i);
+                ++left;
+
+                if (left === right && top == bottom) {
+                    onCell(left, top);
+                    return;
+                }
+            }
+        }
+
+        function drawViewAt(aX,aY) {
+            var point = vecAdd([aX,aY], center);
+            var x = point[0];
+            var y = point[1];
             
             if (mapInBounds([x,y]) && viewCheck.test([x,y])) {
                 if (t.GetCharXY(x,y) === ' ') {
@@ -419,6 +459,8 @@ function dungeon() {
                 t.PutColorXY(x,y, [color[0], term.RED]);
             } 
         }
+
+        console.log([viewCheck.hits/viewCheck.testCalls, viewCheck.hits,viewCheck.testCalls]);
     }
 
     function buildViewMap(radius) {
@@ -435,14 +477,25 @@ function dungeon() {
             return {
                 center: ['set by newInstance'],
                 resolver: function() {return ['set by newInstance'];},
+                memory: prep2DimArray(sideLen, 0),
+                hits: 0,
+                testCalls: 0,
                 test: function(testPos) {
-                    var absolutePos = vecAdd(absoluteCenter, vecDiff(testPos, this.center));
+                    ++this.testCalls;
+                    var toAbsTranslate = vecAdd(absoluteCenter, vecSubst([0,0], this.center));
+                    var absolutePos = vecAdd(toAbsTranslate, testPos);
                     
                     var abX = absolutePos[0];
                     var abY = absolutePos[1];
                     
                     if (abX < 0 || abX >= sideLen || abY < 0 || abY >= sideLen) {
                         return false;
+                    }
+
+                    var snapshot = this.memory[abY][abX];
+                    if (snapshot > 0) {
+                        ++this.hits;
+                        return snapshot;
                     }
 
                     var vector = mesh[abY][abX];
@@ -452,11 +505,15 @@ function dungeon() {
                     var cursor = [].concat(this.center);
 
                     for (var i=0;i<vLen;i++) {
-                        var cursor = vecAdd(cursor, v);
+                        cursor = vecAdd(cursor, v);
                         var point = vecApply(cursor, Math.round);
                         var isBlocker = this.resolver(point);
                         if (isBlocker) {
                             return false;
+                        }
+                        else {
+                            var cachePoint = vecAdd(point, toAbsTranslate);
+                            ++this.memory[cachePoint[1]][cachePoint[0]];
                         }
                     }
 
@@ -482,7 +539,7 @@ function dungeon() {
             var lineStart = vecAdd(here, [0.5, 0.5]);
             var lineEnd = vecAdd(target, [0.5, 0.5]);
 
-            var dir = vecDiff(lineEnd, lineStart);
+            var dir = vecSubst(lineEnd, lineStart);
             var vector = { 
                 v:vecUnit(dir), 
                 len:Math.round(vecLength(dir)) 
@@ -551,10 +608,17 @@ function dungeon() {
         return {a:a, b:b};
     }
 
-    function prep2DimArray(side) {
+    function prep2DimArray(side, def) {
         var ret = [];
         for (var i=0;i<side;i++) {
-            ret.push([]);
+            var val = [];
+            if (def !== undefined) {
+                for (var j=0;j<side;j++) {
+                    val.push(def);
+                }
+            }
+            ret.push(val);
+
         }
 
         return ret;
@@ -577,7 +641,7 @@ function dungeon() {
         return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
     }
 
-    function vecDiff(vecA, vecB) {
+    function vecSubst(vecA, vecB) {
         return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
     }
 
@@ -591,7 +655,7 @@ function dungeon() {
     }
 
     function pointDistance(pointA, pointB) {
-        return vecLength(vecDiff(pointA, pointB));
+        return vecLength(vecSubst(pointA, pointB));
     }
 
     function drawObjects() {
