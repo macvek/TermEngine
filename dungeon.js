@@ -11,7 +11,7 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
-    var radius = 40;
+    var radius = 20;
     var viewMap = buildViewMap(radius);
 
     drawOnMap([
@@ -339,10 +339,10 @@ function dungeon() {
 
     function redraw() {
         t.HoldFlush();
-        //clearConsole();
-        //drawObjects();
-        //drawLineOfSight();
-        drawMesh(10);
+        clearConsole();
+        drawObjects();
+        drawLineOfSight();
+        //drawMesh(radius);
         t.Flush();
     }
 
@@ -362,9 +362,9 @@ function dungeon() {
             for (var y=0;y<mesh.length;y++) {
                 var row = mesh[y];
                 for (var x=0;x<row.length;x++) {
-                    var routes = mesh[y][x];
+                    var vector = mesh[y][x];
                     if (mapInBounds([x+1,y+1])) {
-                        t.PutCharXY(x+1,y+1, ''+routes.length);
+                        t.PutCharXY(x+1,y+1, vector.len%10);
                     }
                 }
             }
@@ -387,14 +387,20 @@ function dungeon() {
     function drawRoute(mesh, pos,color) {
         var x = pos[0];
         var y = pos[1];
-        var route = mesh[y][x];
-        t.PutColorXY(x+1, y+1, [color, term.BLACK]);
+        var vector = mesh[y][x];
+        
+        var v = vecApply(vector.v, x => -x);
+        var len = vector.len;
+        var cursor = [].concat(pos);
 
-        for (var points of route) {
-            for (var point of points) {
-                drawRoute(mesh, [x+point[0], y+point[1]], color);
+        for (var i=0;i<len+1;i++) {
+            var point = vecApply(cursor, Math.round);
+           
+            var p = vecAdd(point,[1,1]);
+            if (mapInBounds(p)) {
+                t.PutColorXY(p[0], p[1], [color, term.BLACK]);
             }
-            
+            cursor = vecAdd(cursor, v);
         }
        
     }
@@ -422,17 +428,13 @@ function dungeon() {
         var mesh = prep2DimArray(sideLen);
         for (var y=0;y<sideLen;y++)
         for (var x=0;x<sideLen;x++) {
-            mesh[y][x] = pickNeighbours([x,y], absoluteCenter);
+            mesh[y][x] = calculateVector(absoluteCenter, [x,y]);
         }
 
         var mapInstance = function() {
-            var memory = prep2DimArray(sideLen);
-            memory[radius][radius] = true; // center is always visible; terminator for recursion;
-            
             return {
                 center: ['set by newInstance'],
                 resolver: function() {return ['set by newInstance'];},
-                memory: memory,
                 test: function(testPos) {
                     var absolutePos = vecAdd(absoluteCenter, vecDiff(testPos, this.center));
                     
@@ -443,45 +445,23 @@ function dungeon() {
                         return false;
                     }
 
-                    var snapshot = this.memory[ abY ][ abX ];
-                    if (typeof snapshot === 'boolean') {
-                        return snapshot;
-                    }
+                    var vector = mesh[abY][abX];
+                    var v = vector.v;
+                    var vLen = vector.len;
 
-                    var routes = mesh[abY][abX];
-                    var success = false;
-                    for (var route of routes) {
-                        // hitting last step of the route, should never happen, as center is automatically cached in memory
-                        if (route.length == 0) {
-                            success = true;
-                            break;
-                        }
+                    var cursor = [].concat(this.center);
 
-                        var skipRoute = false;
-                        for (var point of route) {
-                            var neighbour = vecAdd(point, testPos);
-                            var isBlocker = this.resolver( neighbour );
-                            if (isBlocker) {
-                                skipRoute = true;
-                                break;
-                            }
-                        }
-
-                        if (skipRoute) {
-                            continue;
-                        }
-
-                        var lastPoint = route[route.length-1];
-                        var canSee = this.test(lastPoint);
-                        if (canSee) {
-                            success = true;
-                            break;
+                    for (var i=0;i<vLen;i++) {
+                        var cursor = vecAdd(cursor, v);
+                        var point = vecApply(cursor, Math.round);
+                        var isBlocker = this.resolver(point);
+                        if (isBlocker) {
+                            return false;
                         }
                     }
 
-                    var ret = success;
-                    this.memory[ abY ][ abX ] = ret;
-                    return ret;
+                    return true;
+                    
                 }
             }
         }
@@ -498,27 +478,16 @@ function dungeon() {
 
         return ret;
 
-        function pickNeighbours(here, target) {
-            if (here[0] === target[0]) {
-                if (here[1] < target[1]) {
-                    return [ [[0,1]] ];
-                }
-                else if (here[1] > target[1]) {
-                    return [ [[0,-1]] ];
-                }
-                else {
-                    return [];
-                }
-            }
-
-            var neighbours = closerNeighbours(here, target);
-            
+        function calculateVector(here, target) {
             var lineStart = vecAdd(here, [0.5, 0.5]);
             var lineEnd = vecAdd(target, [0.5, 0.5]);
 
-            var line = buildLine(lineStart, lineEnd);
-
-            return lineHitTestList(line, here, neighbours);
+            var dir = vecDiff(lineEnd, lineStart);
+            var vector = { 
+                v:vecUnit(dir), 
+                len:Math.round(vecLength(dir)) 
+            }
+            return vector;
         }
 
     }
@@ -600,12 +569,21 @@ function dungeon() {
         return false;
     }
 
+    function vecApply(vec, func) {
+        return [func(vec[0]), func(vec[1])];
+    }
+
     function vecAdd(vecA, vecB) {
         return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
     }
 
     function vecDiff(vecA, vecB) {
         return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
+    }
+
+    function vecUnit(v) {
+        var len = vecLength(v);
+        return [v[0] / len, v[1]/len];
     }
 
     function vecLength(v) {
