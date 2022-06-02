@@ -421,6 +421,18 @@ function dungeon() {
         }
     }
 
+    function prototypeDrawLineOfSight(playerPos) {
+        var viewCheck = viewMap.newInstance(playerPos, blocksMapSight);
+        var ret = prep2DimArray(radius*2+1);   
+    
+        for (var y=playerPos[1]-radius;y<=playerPos[1]+radius;y++)
+        for (var x=playerPos[0]-radius;x<=playerPos[0]+radius;x++) {
+            ret[y][x] = mapInBounds([x,y]) && viewCheck.test([x,y]);
+        }
+
+        return ret;
+    }
+
     function buildViewMap(radius) {
         var absoluteCenter = [radius,radius];
         var sideLen = radius*2 + 1;
