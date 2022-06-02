@@ -342,7 +342,7 @@ function dungeon() {
         //clearConsole();
         //drawObjects();
         //drawLineOfSight();
-        drawMesh(20);
+        drawMesh(10);
         t.Flush();
     }
 
