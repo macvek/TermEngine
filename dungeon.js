@@ -11,7 +11,7 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player = EntityPlayer();
 
-    var radius = 20;
+    var radius = 40;
     var viewMap = buildViewMap(radius);
 
     drawOnMap([
@@ -339,9 +339,10 @@ function dungeon() {
 
     function redraw() {
         t.HoldFlush();
-        clearConsole();
-        drawObjects();
-        drawLineOfSight();
+        //clearConsole();
+        //drawObjects();
+        //drawLineOfSight();
+        drawMesh(20);
         t.Flush();
     }
 
@@ -386,11 +387,14 @@ function dungeon() {
     function drawRoute(mesh, pos,color) {
         var x = pos[0];
         var y = pos[1];
-        var points = mesh[y][x];
+        var route = mesh[y][x];
         t.PutColorXY(x+1, y+1, [color, term.BLACK]);
 
-        for (var each of points) {
-            drawRoute(mesh, [x+each[0], y+each[1]], color);
+        for (var points of route) {
+            for (var point of points) {
+                drawRoute(mesh, [x+point[0], y+point[1]], color);
+            }
+            
         }
        
     }
@@ -445,19 +449,37 @@ function dungeon() {
                     }
 
                     var routes = mesh[abY][abX];
-                    var anyTrue = false;
+                    var success = false;
                     for (var route of routes) {
-                        var neighbour = vecAdd(route, testPos);
-                        var isBlocker = this.resolver( neighbour );
-                        var canSee = this.test(neighbour);
+                        // hitting last step of the route, should never happen, as center is automatically cached in memory
+                        if (route.length == 0) {
+                            success = true;
+                            break;
+                        }
 
-                        anyTrue = !isBlocker && canSee;
-                        if (anyTrue) {
+                        var skipRoute = false;
+                        for (var point of route) {
+                            var neighbour = vecAdd(point, testPos);
+                            var isBlocker = this.resolver( neighbour );
+                            if (isBlocker) {
+                                skipRoute = true;
+                                break;
+                            }
+                        }
+
+                        if (skipRoute) {
+                            continue;
+                        }
+
+                        var lastPoint = route[route.length-1];
+                        var canSee = this.test(lastPoint);
+                        if (canSee) {
+                            success = true;
                             break;
                         }
                     }
 
-                    var ret = anyTrue;
+                    var ret = success;
                     this.memory[ abY ][ abX ] = ret;
                     return ret;
                 }
@@ -479,10 +501,10 @@ function dungeon() {
         function pickNeighbours(here, target) {
             if (here[0] === target[0]) {
                 if (here[1] < target[1]) {
-                    return [[0,1]];
+                    return [ [[0,1]] ];
                 }
                 else if (here[1] > target[1]) {
-                    return [[0,-1]];
+                    return [ [[0,-1]] ];
                 }
                 else {
                     return [];
@@ -526,7 +548,7 @@ function dungeon() {
         var ret = [];
         for (var box of offsetBoxes) {
             if (lineHitTest(line, vecAdd(baseBox, box))) {
-                ret.push(box);
+                ret.push([box]);
             }
         }
 
