@@ -16,6 +16,7 @@ function dungeon() {
     var shadeColor = term.GRAY;
     var neverSeenSymbol = specialChars.LIGHTSHADE;
     var alreadySeenSymbol = '~';
+    var unknownAsQuestionMark = false;
 
     initLevel();
     redraw();
@@ -91,12 +92,14 @@ function dungeon() {
         keyFocus = Focuses.CURSOR;
         window.addEventListener('keydown', onCursorMove);
         cursorPos = [].concat(player.pos);
+        unknownAsQuestionMark = true;
         redraw();
     }
 
     function leaveCursorMode() {
         keyFocus = Focuses.PLAYER;
         cursorPos = null;
+        unknownAsQuestionMark = false;
         window.removeEventListener('keydown', onCursorMove);
         redraw();
     }
@@ -154,7 +157,12 @@ function dungeon() {
     }
 
     function drawFuncInvisible() {
-        return [];
+        if (unknownAsQuestionMark) {
+            return ['?', term.MAGENTA];
+        }
+        else {
+            return [];
+        }
     }
 
     function createDrawFuncFor2Faces(vis, hidden) {
@@ -327,7 +335,7 @@ function dungeon() {
                 }
                 
                 redraw();
-            });
+            }, 0);
         }
     }
 
@@ -761,9 +769,8 @@ function dungeon() {
             var toDraw = pickBest(objects);
 
             if (toDraw) {
-                var symbolAndColor = toDraw.symbolAndColor();
-                t.PutCharXY(x, y, symbolAndColor[0]);
-                t.PutColorXY(x, y, [symbolAndColor[1], term.BLACK]);
+                t.PutCharXY(x, y, toDraw[0]);
+                t.PutColorXY(x, y, [toDraw[1], term.BLACK]);
             }
             else {
                 t.PutCharXY(x, y, neverSeenSymbol);
@@ -775,7 +782,7 @@ function dungeon() {
             for (var each of objects) {
                 var symbolAndColor = each.symbolAndColor();
                 if (symbolAndColor.length > 0) {
-                    return each;
+                    return symbolAndColor;
                 }
             }
         }
@@ -785,6 +792,30 @@ function dungeon() {
     function drawCursor() {
         var color = t.GetColorXY(cursorPos[0], cursorPos[1]);
         t.PutColorXY(cursorPos[0],cursorPos[1], [color[1], color[0]]);
+
+        drawDebugBox(cursorPos[0] <= 40 ? 42 : 2);
+    }
+
+    function drawDebugBox(posX) {
+        var boxColor = [term.MAGENTA, term.BLACK];
+        var padded = vecApply(cursorPos, it => padWith(''+it, 2, 0));
+        t.DrawBox(posX,2,30,15,TermBorder(' '), boxColor, ` Cell ${padded[0]} x ${padded[1]}`);
+        var background = map.statics.getOne(cursorPos);
+        var objects = map.positions.get(cursorPos);
+
+        var posY = 4;
+        t.SetCursorXY(posX+2, posY++); 
+        t.Print("BG: "+ cellSummary(background));
+        for (var obj of objects) {
+            t.SetCursorXY(posX+2, posY++); 
+            t.Print('#' + cellSummary(obj));
+        }
+
+
+        function cellSummary(it) {
+            var symbol = it.symbol ? it.symbol : 'None';
+            return `${it.name} [${symbol}], W: ${0+it.blocksSight}`;
+        }
     }
 
     function clearConsole() {
@@ -916,11 +947,27 @@ function dungeon() {
     function textPadWithSpaces(lines, padSize) {
         var ret = [];
         for (var line of lines) {
-            ret.push( [line, nChr(' ', padSize-line.length)].join(''));
+            ret.push( padWith(line, padSize, ' ', false));
         }
 
         return ret;
     }
+
+    function padWith(text, padSize, chr, left=true) {
+        if (padSize < text.length) {
+            if (left) {
+                return text.substring(text.length-padSize, text.length);
+            }
+            else {
+                return text.substring(0, padSize);
+            }
+        }
+
+        var padPart = nChr(chr, padSize - text.length);
+        return left ? padPart + text : text + padPart;
+    }
+
+
 
     function nChr(chr, times) {
         var ret = [];
