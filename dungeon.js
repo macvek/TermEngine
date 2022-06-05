@@ -10,6 +10,7 @@ function dungeon() {
     window.addEventListener('keydown', onPlayerMove);
     var player;
     var cursorPos = null;
+    var cursorSpaceBar=0;
 
     var radius = 60;
     var inSightTestEnabled = true;
@@ -281,9 +282,76 @@ function dungeon() {
                 redraw();
             }
         }
+        else if (' ' === e.key) {
+            var spaceBarAction = [
+                toggleWallOnCursor,
+                placeZombieOnCursor,
+                placeMonsterOnCursor,
+                throwAnimationOnCursor,
+                explodeAnimationOnOnCursor
+            ];
+
+            if (cursorSpaceBar >= 0 && cursorSpaceBar < spaceBarAction.length) {
+                spaceBarAction[cursorSpaceBar]();
+            }
+            redraw();
+        }
+        else if ('Enter' === e.key) {
+            var options = [
+                "toggle wall",
+                "zombie",
+                "monster",
+                "throw animation",
+                "explode animation"
+            ];
+
+            keyFocus = Focuses.DIALOG;
+            showDialog("SPACEBAR binding to", "", options, function(optionIdx) {
+                keyFocus = Focuses.CURSOR;
+                if (optionIdx >= 0) {
+                    cursorSpaceBar = optionIdx;
+                }
+                redraw();
+            },-2);
+           
+        }
         else if ('Escape' === e.key) {
             leaveCursorMode();
         }
+    }
+
+    function toggleWallOnCursor() {
+        var something = map.statics.getOne(cursorPos);
+        map.statics.remove(something);
+        if (something.name === 'Wall') {
+            map.statics.put(cursorPos, EntityFloor());
+        }
+        else {
+            map.statics.put(cursorPos, EntityWall());
+        }
+
+        preTurn();
+        redraw();
+    }
+    
+    function placeZombieOnCursor() {
+        map.put(cursorPos, EntityZombie());
+        preTurn();
+        redraw();
+    }
+    
+    function placeMonsterOnCursor() {
+        map.put(cursorPos, EntityMonster());
+        preTurn();
+        redraw();
+    }
+
+    function throwAnimationOnCursor() {
+
+    }
+
+    function explodeAnimationOnOnCursor() {
+
     }
 
     function onPlayerMove(e) {
@@ -953,7 +1021,7 @@ function dungeon() {
         }
 
         function onDialogPress(e) {
-            if ('Escape' === e.key && escapeOption > -1) {
+            if ('Escape' === e.key && escapeOption != -1) {
                 selectedOption = escapeOption;
                 closeDialog();
             }
@@ -1002,8 +1070,6 @@ function dungeon() {
         var padPart = nChr(chr, padSize - text.length);
         return left ? padPart + text : text + padPart;
     }
-
-
 
     function nChr(chr, times) {
         var ret = [];
