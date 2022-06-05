@@ -13,6 +13,7 @@ function dungeon() {
 
     var radius = 60;
     var viewMap = buildViewMap(radius);
+    var shadeColor = term.GRAY;
 
     drawOnMap([
         "                                                                                ",
@@ -97,12 +98,14 @@ function dungeon() {
     function EntityWall() {
         var wall = dynamicObject('#', 'Wall', activateAbort);
         wall.blocksSight = true;
-
+        wall.symbolAndColor = drawFuncShowShadeIfEverSeen;
         return wall;
     }
 
     function EntityFloor() {
-        return dynamicObject(' ', 'Floor');
+        var floor = dynamicObject(' ', 'Floor');
+        floor.symbolAndColor = drawFuncShowShadeIfEverSeen;
+        return floor;
     }
     
     function EntityZombieSpawn() {
@@ -114,16 +117,38 @@ function dungeon() {
     }
 
     function dynamicObject(symbol, name, onActivate, onTurn) {
+        var drawFunc = symbol ? drawFuncShowIfVisible : drawFuncInvisible;
         return {
             pos: [-1,-1],
             symbol:symbol,
+            color: term.LIGHTGRAY,
             name: name,
             onActivate: onActivate,
             onTurn: onTurn,
             blocksSight: false,
             inSight: false,
-            everInSight:false
+            everInSight:false,
+            symbolAndColor: drawFunc
         }
+    }
+
+    function drawFuncInvisible() {
+        return [];
+    }
+
+    function drawFuncShowIfVisible() {
+        return this.inSight ? [this.symbol, this.color] : []
+    }
+
+    function drawFuncShowShadeIfEverSeen() {
+        if (this.inSight) {
+            return [this.symbol, this.color];
+        }
+        if (this.everInSight) {
+            return [this.symbol, shadeColor];
+        }
+        
+        return [];
     }
 
     function initMap() {
@@ -609,30 +634,26 @@ function dungeon() {
     function drawObjects() {
         iterateOverMap(function(x,y) {
             var pos = [x,y];
-            var background = map.statics.getOne(pos);
-            var objects = map.positions.get(pos);
-            var toDraw = pickBest(objects, background);
+            var objects = map.getAll(pos);
+            var toDraw = pickBest(objects);
 
             if (toDraw) {
-                var color = toDraw.inSight ? [term.LIGHTGRAY,term.BLACK] : [term.GRAY,term.BLACK];
-                t.PutColorXY(x, y, color);
-                t.PutCharXY(x, y, toDraw.symbol);
+                var symbolAndColor = toDraw.symbolAndColor();
+                t.PutCharXY(x, y, symbolAndColor[0]);
+                t.PutColorXY(x, y, [symbolAndColor[1], term.BLACK]);
             }
             else {
-                t.PutColorXY(x, y, [term.GRAY, term.BLACK]);
                 t.PutCharXY(x, y, '~');
+                t.PutColorXY(x, y, [shadeColor, term.BLACK]);
             }
         });
 
-        function pickBest(objects, background) {
+        function pickBest(objects) {
             for (var each of objects) {
-                if (each.symbol && each.inSight) {
+                var symbolAndColor = each.symbolAndColor();
+                if (symbolAndColor.length > 0) {
                     return each;
                 }
-            }
-
-            if (background.symbol && background.everInSight) {
-                return background;
             }
         }
 
