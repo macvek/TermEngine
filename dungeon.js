@@ -2,13 +2,14 @@ window.addEventListener('load', dungeon);
 
 function dungeon() {
     var t = TermStart();
-    var Focuses = toAtoms(['PLAYER', 'DIALOG'])
+    var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR'])
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
     var keyFocus;
     var map;
 
     window.addEventListener('keydown', onPlayerMove);
     var player;
+    var cursorPos = null;
 
     var radius = 60;
     var viewMap = buildViewMap(radius);
@@ -47,9 +48,9 @@ function dungeon() {
             "                                                                                ",
             "                                                                                ",
             "        B                                              #########################",
-            "                                                       #                        ",
-            "                                                       #                        ",
-            "                                                       #                        ",
+            "                                                       #      #                 ",
+            "                                                       #     #                  ",
+            "                                                       #    #                   ",
         ]);
     }
 
@@ -84,6 +85,20 @@ function dungeon() {
         function putStatic(ent) {
             map.statics.put(pos, ent);
         }
+    }
+
+    function enterCursorMode() {
+        keyFocus = Focuses.CURSOR;
+        window.addEventListener('keydown', onCursorMove);
+        cursorPos = [].concat(player.pos);
+        redraw();
+    }
+
+    function leaveCursorMode() {
+        keyFocus = Focuses.PLAYER;
+        cursorPos = null;
+        window.removeEventListener('keydown', onCursorMove);
+        redraw();
     }
 
     function EntityPlayer() {
@@ -246,34 +261,26 @@ function dungeon() {
             && pos[1] >= map.bounds.minY && pos[1] <= map.bounds.maxY;
     }
    
+    function onCursorMove(e) {
+        if (keyFocus != Focuses.CURSOR) return;
+        var vector = keyToVector(e);
+        if (vector) {
+            var newCursorPos = vecAdd(vector, cursorPos);
+            if (mapInBounds(newCursorPos)) {
+                cursorPos = newCursorPos;
+                redraw();
+            }
+        }
+        else if ('Escape' === e.key) {
+            leaveCursorMode();
+        }
+    }
+
     function onPlayerMove(e) {
         if (keyFocus != Focuses.PLAYER) return;
-        if ("ArrowDown" === e.key || "2" === e.key)  {
-            movePlayer(0,1);
-        }
-        else if ("ArrowUp" === e.key || "8" === e.key) {
-            movePlayer(0,-1);
-        }
-        else if ("ArrowLeft" === e.key || "4" === e.key) {
-            movePlayer(-1,0);
-        }
-        else if ("ArrowRight" === e.key || "6" === e.key) {
-            movePlayer(1,0);
-        }
-        else if ("7" === e.key) {
-            movePlayer(-1,-1);
-        }
-        else if ("9" === e.key) {
-            movePlayer( 1,-1);
-        }
-        else if ("1" === e.key) {
-            movePlayer(-1, 1);
-        }
-        else if ("3" === e.key) {
-            movePlayer( 1, 1);
-        }
-        else if ("5" === e.key) {
-            movePlayer( 0, 0);
+        var vector = keyToVector(e);
+        if (vector) {
+            movePlayer(vector);
         }
         else if ('Enter' === e.key) {
             keyFocus = Focuses.DIALOG;
@@ -296,7 +303,8 @@ function dungeon() {
                     keyFocus = Focuses.PLAYER;
                 }
                 else if (optionIdx == 1) {
-                    keyFocus = Focuses.CURSOR;
+                    enterCursorMode();
+                    return;
                 }
                 else if (optionIdx == 2) {
                     initLevel();
@@ -323,10 +331,42 @@ function dungeon() {
         }
     }
 
+    function keyToVector(e) {
+        if ("ArrowDown" === e.key || "2" === e.key)  {
+            return [0,1];
+        }
+        else if ("ArrowUp" === e.key || "8" === e.key) {
+            return [0,-1];
+        }
+        else if ("ArrowLeft" === e.key || "4" === e.key) {
+            return [-1,0];
+        }
+        else if ("ArrowRight" === e.key || "6" === e.key) {
+            return [1,0];
+        }
+        else if ("7" === e.key) {
+            return [-1,-1];
+        }
+        else if ("9" === e.key) {
+            return [1,-1];
+        }
+        else if ("1" === e.key) {
+            return [-1, 1];
+        }
+        else if ("3" === e.key) {
+            return [1, 1];
+        }
+        else if ("5" === e.key) {
+            return [0, 0];
+        }
+
+        return null;
+    }
+
     function animateMove() {
         var moves = 80;
         var animator = setInterval(function() {
-            movePlayer(1,0);
+            movePlayer([1,0]);
             if (--moves == 0) {
                 clearInterval(animator);
                 keyFocus = Focuses.PLAYER;
@@ -337,8 +377,8 @@ function dungeon() {
     }
 
 
-    function movePlayer(ox, oy) {
-        var newPos = [player.pos[0]+ox, player.pos[1]+oy];
+    function movePlayer(oxDiff) {
+        var newPos = vecAdd(player.pos, oxDiff);
         
         if (ActivateResults.ABORT === playerTurnMove(newPos)) {
             return;
@@ -472,10 +512,12 @@ function dungeon() {
     function redraw() {
         window.requestAnimationFrame(function() {
             t.HoldFlush();
-            clearConsole();
             resetInSightState();
             inSightCheck();
             drawObjects();
+            if (cursorPos) {
+                drawCursor();
+            }
             t.Flush();
         });
     }
@@ -738,6 +780,11 @@ function dungeon() {
             }
         }
 
+    }
+
+    function drawCursor() {
+        var color = t.GetColorXY(cursorPos[0], cursorPos[1]);
+        t.PutColorXY(cursorPos[0],cursorPos[1], [color[1], color[0]]);
     }
 
     function clearConsole() {
