@@ -484,10 +484,6 @@ function dungeon() {
                 }
             }
         }
-
-        
-
-        console.log([viewCheck.hits/viewCheck.testCalls, viewCheck.hits,viewCheck.testCalls]);
     }
 
     function buildViewMap(radius) {
