@@ -102,7 +102,7 @@ function dungeon() {
     }
 
     function EntityFloor() {
-        return dynamicObject('', 'Floor');
+        return dynamicObject(' ', 'Floor');
     }
     
     function EntityZombieSpawn() {
@@ -121,6 +121,8 @@ function dungeon() {
             onActivate: onActivate,
             onTurn: onTurn,
             blocksSight: false,
+            inSight: false,
+            everInSight:false
         }
     }
 
@@ -290,7 +292,7 @@ function dungeon() {
             return ActivateResults.STOP;
         }
         var destination = map.positions.get(newPos);
-        var destSubjects = [].concat(destination);
+        var destSubjects = [].concat(destination).concat(map.statics.getOne(newPos));
         var canMove = true;
         var canAbort = true;
         for (var subject of destSubjects) {
@@ -367,21 +369,47 @@ function dungeon() {
     function redraw() {
         t.HoldFlush();
         clearConsole();
+        resetInSightState();
+        inSightCheck();
         drawObjects();
-        drawLineOfSight();
         t.Flush();
     }
 
-    function drawLineOfSight() {
+    function resetInSightState() {
+        iterateOverMap(function(x,y) {
+           var pos = [x,y];
+           for (obj of map.positions.get(pos)) {
+               obj.inSight = false;
+           }
+
+           map.statics.getOne(pos).inSight = false;
+        });
+    }
+
+    function inSightCheck() {
         var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
         var radPoint = [radius,radius]
         var center = vecSubst(player.pos, radPoint);
         var max = [radius*2+1, radius*2+1];
 
 
-        if (false) debugScan([ vecAdd(radPoint, [3,2]) ], drawViewAt);
-        if (false) linearScan(max, drawViewAt);
-        outboundSpiral(max, drawViewAt);
+        if (false) debugScan([ vecAdd(radPoint, [3,2]) ], checkCell);
+        if (false) linearScan(max, checkCell);
+        outboundSpiral(max, checkCell);
+
+        function checkCell(aX,aY) {
+            var pos = vecAdd([aX,aY], center);
+            if (mapInBounds(pos) && viewCheck.test(pos)) {
+                for (obj of map.positions.get(pos)) {
+                    obj.inSight = true;
+                    obj.everInSight = true;
+                }
+
+                var background = map.statics.getOne(pos);
+                background.inSight = true;
+                background.everInSight = true;
+            } 
+        }
 
         function debugScan(cells, onCell) {
             for (var cell of cells) {
@@ -395,6 +423,8 @@ function dungeon() {
                 onCell(x,y);
             }   
         }
+
+        
 
         function outboundSpiral(boundary, onCell) {
             var left = 0;
@@ -422,19 +452,7 @@ function dungeon() {
             }
         }
 
-        function drawViewAt(aX,aY) {
-            var point = vecAdd([aX,aY], center);
-            var x = point[0];
-            var y = point[1];
-            
-            if (mapInBounds([x,y]) && viewCheck.test([x,y])) {
-                if (t.GetCharXY(x,y) === ' ') {
-                    t.PutCharXY(x,y, specialChars.DOT);
-                }
-                var color = t.GetColorXY(x,y)
-                t.PutColorXY(x,y, [color[0], term.RED]);
-            } 
-        }
+        
 
         console.log([viewCheck.hits/viewCheck.testCalls, viewCheck.hits,viewCheck.testCalls]);
     }
@@ -601,18 +619,24 @@ function dungeon() {
             var toDraw = pickBest(objects, background);
 
             if (toDraw) {
+                var color = toDraw.inSight ? [term.LIGHTGRAY,term.BLACK] : [term.GRAY,term.BLACK];
+                t.PutColorXY(x, y, color);
                 t.PutCharXY(x, y, toDraw.symbol);
+            }
+            else {
+                t.PutColorXY(x, y, [term.GRAY, term.BLACK]);
+                t.PutCharXY(x, y, '~');
             }
         });
 
         function pickBest(objects, background) {
             for (var each of objects) {
-                if (each.symbol) {
+                if (each.symbol && each.inSight) {
                     return each;
                 }
             }
 
-            if (background.symbol) {
+            if (background.symbol && background.everInSight) {
                 return background;
             }
         }
