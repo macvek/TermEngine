@@ -20,6 +20,7 @@ function dungeon() {
     var unknownAsQuestionMark = false;
 
     initLevel();
+    preTurn();
     redraw();
 
     function initLevel() {
@@ -347,6 +348,7 @@ function dungeon() {
                     keyFocus = Focuses.PLAYER;
                 }
                 
+                preTurn();
                 redraw();
             }, 0);
         }
@@ -489,8 +491,13 @@ function dungeon() {
         }
     }
 
+    function preTurn() {
+        performInSightValidation();
+    }
+
     function nextTurn() {
         var start = new Date().getTime();
+        preTurn();
         for (var each of map.objects) {
             if (each.onTurn) {
                 var callback = each.onTurn;
@@ -544,7 +551,6 @@ function dungeon() {
     function redraw() {
         window.requestAnimationFrame(function() {
             t.HoldFlush();
-            performInSightValidation();
             drawObjects();
             if (cursorPos) {
                 drawCursor();
