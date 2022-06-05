@@ -4,12 +4,11 @@ function dungeon() {
     var t = TermStart();
     var Focuses = toAtoms(['PLAYER', 'DIALOG'])
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
-
-    let keyFocus = Focuses.PLAYER;
-    var map = initMap();
+    var keyFocus;
+    var map;
 
     window.addEventListener('keydown', onPlayerMove);
-    var player = EntityPlayer();
+    var player;
 
     var radius = 60;
     var viewMap = buildViewMap(radius);
@@ -17,39 +16,41 @@ function dungeon() {
     var neverSeenSymbol = specialChars.LIGHTSHADE;
     var alreadySeenSymbol = '~';
 
-    drawOnMap([
-        "                                                                                ",
-        "        ########                                                                ",
-        "        #                                                                       ",
-        "        #     ##                                                                ",
-        "        #     #                       @                  S                      ",
-        "        #######                                                                 ",
-        "                                                                                ",
-        "                                                                                ",
-        "                                                                                ",
-        "                   ########## #####                                             ",
-        "                   #              #                                             ",
-        "                   #              #                                             ",
-        "                   #              #                                             ",
-        "                   ###### #########                                             ",
-        "                                                                                ",
-        "                                                                                ",
-        "                                                                                ",
-        "                                                                                ",
-        "                                                                                ",
-        "                                                                                ",
-        "        B                                              #########################",
-        "                                                       #                        ",
-        "                                                       #                        ",
-        "                                                       #                        ",
-    ]);
+    initLevel();
+    redraw();
 
-    inLevelWalk();
-
-    function inLevelWalk() {
+    function initLevel() {
         t.HideCursor();
-        clearConsole();
-        redraw();
+
+        player = EntityPlayer();
+        map = initMap();
+        keyFocus = Focuses.PLAYER
+        drawOnMap([
+            "                                                                                ",
+            "        ########                                                                ",
+            "        #                                                                       ",
+            "        #     ##                                                                ",
+            "        #     #                       @                  S                      ",
+            "        #######                                                                 ",
+            "                                                                                ",
+            "                                                                                ",
+            "                                                                                ",
+            "                   ########## #####                                             ",
+            "                   #              #                                             ",
+            "                   #              #                                             ",
+            "                   #              #                                             ",
+            "                   ###### #########                                             ",
+            "                                                                                ",
+            "                                                                                ",
+            "                                                                                ",
+            "                                                                                ",
+            "                                                                                ",
+            "                                                                                ",
+            "        B                                              #########################",
+            "                                                       #                        ",
+            "                                                       #                        ",
+            "                                                       #                        ",
+        ]);
     }
 
     function drawOnMap(lines) {
@@ -277,20 +278,63 @@ function dungeon() {
         else if ('Enter' === e.key) {
             keyFocus = Focuses.DIALOG;
             var options = [
-                "Option 1",
-                "Option 2 2 2",
-                "Option 3",
+                "Player",
+                "Cursor",
+                "Reset map",
+                "Animate move",
+                "Radius 80",
+                "Radius 60",
+                "Radius 45",
+                "Radius 30",
+                "Radius 10",
+                "Radius 5",
+                "Radius 3",
             ];
 
-            showDialog("Dialog", "This is a sample\nPossibly multiline text", options, function(optionIdx) {
-                console.log(options[optionIdx]);
-                keyFocus = Focuses.PLAYER;
+            showDialog("Switch mode", "", options, function(optionIdx) {
+                if (optionIdx == 0) {
+                    keyFocus = Focuses.PLAYER;
+                }
+                else if (optionIdx == 1) {
+                    keyFocus = Focuses.CURSOR;
+                }
+                else if (optionIdx == 2) {
+                    initLevel();
+                }
+                else if (optionIdx == 3) {
+                    animateMove();
+                }
+                else {
+                    var base = 4;
+                    switch(optionIdx) {
+                        case base+0: radius = 80; break;
+                        case base+1: radius = 60; break;
+                        case base+2: radius = 45; break;
+                        case base+3: radius = 30; break;
+                        case base+4: radius = 10; break;
+                        case base+5: radius = 5; break;
+                        case base+6: radius = 3; break;
+                    }
+                    keyFocus = Focuses.PLAYER;
+                }
+                
                 redraw();
             });
         }
     }
 
-    
+    function animateMove() {
+        var moves = 80;
+        var animator = setInterval(function() {
+            movePlayer(1,0);
+            if (--moves == 0) {
+                clearInterval(animator);
+                keyFocus = Focuses.PLAYER;
+            }
+        },10);
+
+
+    }
 
 
     function movePlayer(ox, oy) {
@@ -374,6 +418,7 @@ function dungeon() {
     }
 
     function nextTurn() {
+        var start = new Date().getTime();
         for (var each of map.objects) {
             if (each.onTurn) {
                 var callback = each.onTurn;
@@ -381,6 +426,8 @@ function dungeon() {
             }
         }
         redraw();
+        var done = new Date().getTime();
+        console.log ("turn took "+ ((done-start)/1000.0));
     }
 
     function monsterTurn(ent) {
@@ -751,14 +798,16 @@ function dungeon() {
 
         var selectedOption = 0;
         var messageLines = message.split('\n');
-        messageLines.push(''); // extra line to separate options
+        if (message) {
+            messageLines.push(''); // extra line to separate options
+        }   
         var messageRect = textRectFromLines(messageLines);
         var optionsRect = textRectFromLines(options);
 
-        var boxWidth = Math.max(messageRect[0], optionsRect[0])
+        var boxWidth = Math.max(title.length,messageRect[0], optionsRect[0])
             
         var box = vecAdd( 
-            [4,4], 
+            [4,3], 
             [ boxWidth, messageRect[1] + optionsRect[1] ]
         );
 
@@ -771,7 +820,7 @@ function dungeon() {
 
         function drawDialog() {
             
-            var cursor = vecAdd(offset,[2,2]);
+            var cursor = vecAdd(offset,[2,1]);
             t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
 
             printLineWithCursorAndColor(messageLines, -1);
