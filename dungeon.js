@@ -54,23 +54,31 @@ function dungeon() {
         for (var x=0;x<lines[y].length;x++) {
             var chr = lines[y].charAt(x);
             var pos = [x+1,y+1];
-            var ent = null;
             if ("#" === chr) {
-                ent = EntityWall();
+                putStatic(EntityWall());
             }
-            else if ("@" === chr) {
-                ent = player;
-            }
-            else if ("S" === chr) {
-                ent = EntityZombieSpawn();
-            }
-            else if ("B" === chr) {
-                ent = EntityMonsterSpawn();
+            else {
+                putStatic(EntityFloor());
             }
 
-            if (ent) {
-                map.put(pos, ent);
+            if ("@" === chr) {
+                putEnt(player);
             }
+            else if ("S" === chr) {
+                putEnt(EntityZombieSpawn());
+            }
+            else if ("B" === chr) {
+                putEnt(EntityMonsterSpawn());
+            }
+
+        }
+
+        function putEnt(ent) {
+            map.put(pos, ent);
+        }
+
+        function putStatic(ent) {
+            map.statics.put(pos, ent);
         }
     }
 
@@ -91,6 +99,10 @@ function dungeon() {
         wall.blocksSight = true;
 
         return wall;
+    }
+
+    function EntityFloor() {
+        return dynamicObject('', 'Floor');
     }
     
     function EntityZombieSpawn() {
@@ -117,6 +129,7 @@ function dungeon() {
         return {
             bounds:{ minX:1, maxX:80, minY:1, maxY:24 },
             objects: [],
+            statics: indexedObjects(),
             positions: indexedObjects(),
             put: function(where, what) {
                 this.objects.push(what);
@@ -129,9 +142,23 @@ function dungeon() {
         }
     }
 
+    function iterateOverMap(callback) {
+        for (var y=map.bounds.minY; y<=map.bounds.maxY;y++)
+        for (var x=map.bounds.minX; x<=map.bounds.maxX;x++) {
+            callback(x,y);
+        }
+    }
+
     function indexedObjects() {
         return {
             rows: [],
+            getOne: function(pos) {
+                var ret = this.get(pos);
+                if (ret.length != 1) {
+                    console.error("Expected one item", [pos, ret]);
+                }
+                return ret[0];
+            },
             get: function(pos) {
                 var y = pos[1];
                 var x = pos[0];
@@ -536,7 +563,9 @@ function dungeon() {
                 return true;
             }
         }
-        return false;
+
+        var background = map.statics.getOne(pos);
+        return background.blocksSight;
     }
 
     function vecApply(vec, func) {
@@ -565,11 +594,29 @@ function dungeon() {
     }
 
     function drawObjects() {
-        for (var each of map.objects) {
-            if (each.symbol) {
-                t.PutCharXY(each.pos[0], each.pos[1], each.symbol);
+        iterateOverMap(function(x,y) {
+            var pos = [x,y];
+            var background = map.statics.getOne(pos);
+            var objects = map.positions.get(pos);
+            var toDraw = pickBest(objects, background);
+
+            if (toDraw) {
+                t.PutCharXY(x, y, toDraw.symbol);
+            }
+        });
+
+        function pickBest(objects, background) {
+            for (var each of objects) {
+                if (each.symbol) {
+                    return each;
+                }
+            }
+
+            if (background.symbol) {
+                return background;
             }
         }
+
     }
 
     function clearConsole() {
