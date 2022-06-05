@@ -2,7 +2,7 @@ window.addEventListener('load', dungeon);
 
 function dungeon() {
     var t = TermStart();
-    var Focuses = toAtoms(['PLAYER'])
+    var Focuses = toAtoms(['PLAYER', 'DIALOG'])
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
 
     let keyFocus = Focuses.PLAYER;
@@ -240,12 +240,11 @@ function dungeon() {
         }
     }
 
-
     function mapInBounds(pos) {
         return pos[0] >= map.bounds.minX && pos[0] <= map.bounds.maxX 
             && pos[1] >= map.bounds.minY && pos[1] <= map.bounds.maxY;
     }
-
+   
     function onPlayerMove(e) {
         if (keyFocus != Focuses.PLAYER) return;
         if ("ArrowDown" === e.key || "2" === e.key)  {
@@ -275,7 +274,116 @@ function dungeon() {
         else if ("5" === e.key) {
             movePlayer( 0, 0);
         }
+        else if ('Enter' === e.key) {
+            keyFocus = Focuses.DIALOG;
+            showDialog(function() {
+                keyFocus = Focuses.PLAYER;
+                redraw();
+            });
+        }
     }
+
+    function showDialog(onClose) {
+
+        window.addEventListener('keydown', onDialogPress);
+
+        var selectedOption = 0;
+        var options = [
+            "Option 1",
+            "Option 2 2 2",
+            "Option 3",
+        ];
+
+        t.HoldFlush();
+        drawDialog();
+        t.Flush();
+
+        function drawDialog() {
+
+            var title = " DIALOG ";
+            var message = "This is a\nMultiline Multiline Multiline\nText";
+
+            var messageLines = message.split('\n');
+            var messageRect = textRectFromLines(messageLines);
+            var optionsRect = textRectFromLines(options);
+
+            var boxWidth = Math.max(messageRect[0], optionsRect[0])
+            
+            var box = vecAdd( 
+                [4,4], 
+                [ boxWidth, messageRect[1] + optionsRect[1] ]
+            );
+
+            var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
+
+            var cursor = vecAdd(offset,[2,2]);
+            var color = [term.LIGHTGRAY,term.BLACK];
+            var selectedColor = [term.BLACK, term.LIGHTGRAY];
+
+            t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
+
+            for (var line of messageLines) {
+                t.SetCursorXY(cursor[0], cursor[1]);
+                t.Print(line);
+
+                ++cursor[1];
+            }
+            ++cursor[1];
+
+            var paddedOptions = textPadWithSpaces(options, boxWidth);
+            for (var i=0;i<paddedOptions.length;i++) {
+                var line = paddedOptions[i];
+                t.SetCursorXY(cursor[0], cursor[1]);
+                t.Print(line, selectedOption == i ? selectedColor : color);
+
+                ++cursor[1];
+            }
+        }
+
+        function onDialogPress(e) {
+            if ('Escape' === e.key) {
+                window.removeEventListener('keydown', onDialogPress);
+                onClose();
+            }
+            else if ('ArrowUp' === e.key) {
+                selectedOption = ((selectedOption-1) + options.length) % options.length;
+                drawDialog();
+            }
+            else if ('ArrowDown' === e.key) {
+                selectedOption = (selectedOption+1) % options.length;
+                drawDialog();
+            }
+        
+        }
+    } 
+
+    function textPadWithSpaces(lines, padSize) {
+        var ret = [];
+        for (var line of lines) {
+            ret.push( [line, nChr(' ', padSize-line.length)].join(''));
+        }
+
+        return ret;
+    }
+
+    function nChr(chr, times) {
+        var ret = [];
+        for (var i=0;i<times;i++) {
+            ret.push(chr);
+        }
+
+        return ret.join('');
+    }
+
+    function textRectFromLines(lines) {
+        var maxWidth = 0;
+        for (var line of lines) {
+            maxWidth = Math.max(maxWidth, line.length);
+        }
+
+        return [maxWidth, lines.length];
+    }
+
 
     function movePlayer(ox, oy) {
         var newPos = [player.pos[0]+ox, player.pos[1]+oy];
@@ -614,16 +722,24 @@ function dungeon() {
         return false;
     }
 
+    function vecApply2(vec1, vec2, func) {
+        return [ func(vec1[0], vec2[0]), func(vec1[1], vec2[1])];
+    }
+
     function vecApply(vec, func) {
         return [func(vec[0]), func(vec[1])];
     }
 
     function vecAdd(vecA, vecB) {
-        return [vecA[0] + vecB[0], vecA[1] + vecB[1]];
+        return vecApply2(vecA, vecB, (a,b) => a+b);
     }
 
     function vecSubst(vecA, vecB) {
-        return [vecA[0] - vecB[0], vecA[1] - vecB[1]];
+        return vecApply2(vecA, vecB, (a,b) => a-b);
+    }
+    
+    function vecDivide(vecA, vecB) {
+        return vecApply2(vecA, vecB, (a,b) => a/b);
     }
 
     function vecUnit(v) {
