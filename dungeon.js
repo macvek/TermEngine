@@ -470,12 +470,14 @@ function dungeon() {
     }
 
     function redraw() {
-        t.HoldFlush();
-        clearConsole();
-        resetInSightState();
-        inSightCheck();
-        drawObjects();
-        t.Flush();
+        window.requestAnimationFrame(function() {
+            t.HoldFlush();
+            clearConsole();
+            resetInSightState();
+            inSightCheck();
+            drawObjects();
+            t.Flush();
+        });
     }
 
     function resetInSightState() {
@@ -814,12 +816,10 @@ function dungeon() {
         var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
         var paddedOptions = textPadWithSpaces(options, boxWidth);
 
-        t.HoldFlush();
         drawDialog();
-        t.Flush();
 
         function drawDialog() {
-            
+            t.HoldFlush();            
             var cursor = vecAdd(offset,[2,1]);
             t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
 
@@ -835,6 +835,7 @@ function dungeon() {
                     ++cursor[1];
                 }
             }
+            t.Flush();
         }
 
         function onDialogPress(e) {
