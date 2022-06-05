@@ -133,6 +133,9 @@ function dungeon() {
             objects: [],
             statics: indexedObjects(),
             positions: indexedObjects(),
+            getAll: function(where) {
+                return this.positions.get(where).concat(this.statics.get(where));
+            },
             put: function(where, what) {
                 this.objects.push(what);
                 this.positions.put(where, what)
@@ -291,8 +294,8 @@ function dungeon() {
         if (arrayEquals(ent.pos, newPos)) {
             return ActivateResults.STOP;
         }
-        var destination = map.positions.get(newPos);
-        var destSubjects = [].concat(destination).concat(map.statics.getOne(newPos));
+
+        var destSubjects = map.getAll(newPos);
         var canMove = true;
         var canAbort = true;
         for (var subject of destSubjects) {
@@ -377,12 +380,9 @@ function dungeon() {
 
     function resetInSightState() {
         iterateOverMap(function(x,y) {
-           var pos = [x,y];
-           for (obj of map.positions.get(pos)) {
+           for (obj of map.getAll([x,y])) {
                obj.inSight = false;
            }
-
-           map.statics.getOne(pos).inSight = false;
         });
     }
 
@@ -400,14 +400,10 @@ function dungeon() {
         function checkCell(aX,aY) {
             var pos = vecAdd([aX,aY], center);
             if (mapInBounds(pos) && viewCheck.test(pos)) {
-                for (obj of map.positions.get(pos)) {
+                for (obj of map.getAll(pos)) {
                     obj.inSight = true;
                     obj.everInSight = true;
                 }
-
-                var background = map.statics.getOne(pos);
-                background.inSight = true;
-                background.everInSight = true;
             } 
         }
 
@@ -576,14 +572,13 @@ function dungeon() {
     }
     
     function blocksMapSight(pos) {
-        for (var each of map.positions.get(pos)) {
+        for (var each of map.getAll(pos)) {
             if (each.blocksSight) {
                 return true;
             }
         }
 
-        var background = map.statics.getOne(pos);
-        return background.blocksSight;
+        return false;
     }
 
     function vecApply(vec, func) {
