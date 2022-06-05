@@ -290,105 +290,7 @@ function dungeon() {
         }
     }
 
-    function showDialog(title, message, options, onOption, escapeOption=-1) {
-        window.addEventListener('keydown', onDialogPress);
-
-        var color = [term.LIGHTGRAY,term.BLACK];
-        var selectedColor = [term.BLACK, term.LIGHTGRAY];
-
-        var selectedOption = 0;
-        var messageLines = message.split('\n');
-        messageLines.push(''); // extra line to separate options
-        var messageRect = textRectFromLines(messageLines);
-        var optionsRect = textRectFromLines(options);
-
-        var boxWidth = Math.max(messageRect[0], optionsRect[0])
-            
-        var box = vecAdd( 
-            [4,4], 
-            [ boxWidth, messageRect[1] + optionsRect[1] ]
-        );
-
-        var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
-        var paddedOptions = textPadWithSpaces(options, boxWidth);
-
-        t.HoldFlush();
-        drawDialog();
-        t.Flush();
-
-        function drawDialog() {
-            
-            var cursor = vecAdd(offset,[2,2]);
-            t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
-
-            printLineWithCursorAndColor(messageLines, -1);
-            printLineWithCursorAndColor(paddedOptions, selectedOption);
-
-            function printLineWithCursorAndColor(lines, selectIdx) {
-                for (var i=0;i<lines.length;i++) {
-                    var line = lines[i];
-                    t.SetCursorXY(cursor[0], cursor[1]);
-                    t.Print(line, selectIdx == i ? selectedColor : color);
     
-                    ++cursor[1];
-                }
-            }
-        }
-
-        function onDialogPress(e) {
-            if ('Escape' === e.key && escapeOption > -1) {
-                selectedOption = escapeOption;
-                closeDialog();
-            }
-            else if ('ArrowUp' === e.key) {
-                selectedOption = rangedOption(selectedOption-1, options.length);
-                drawDialog();
-            }
-            else if ('ArrowDown' === e.key) {
-                selectedOption = rangedOption(selectedOption+1, options.length);
-                drawDialog();
-            }
-            else if ('Enter' === e.key) {
-                closeDialog();
-            }
-        }
-
-        function closeDialog() {
-            window.removeEventListener('keydown', onDialogPress);
-            onOption(selectedOption);
-        }
-    } 
-
-    function rangedOption(val, range) {
-        return (val + range) % range;
-    }
-
-    function textPadWithSpaces(lines, padSize) {
-        var ret = [];
-        for (var line of lines) {
-            ret.push( [line, nChr(' ', padSize-line.length)].join(''));
-        }
-
-        return ret;
-    }
-
-    function nChr(chr, times) {
-        var ret = [];
-        for (var i=0;i<times;i++) {
-            ret.push(chr);
-        }
-
-        return ret.join('');
-    }
-
-    function textRectFromLines(lines) {
-        var maxWidth = 0;
-        for (var line of lines) {
-            maxWidth = Math.max(maxWidth, line.length);
-        }
-
-        return [maxWidth, lines.length];
-    }
 
 
     function movePlayer(ox, oy) {
@@ -839,6 +741,106 @@ function dungeon() {
         else {
             return obj[name];
         }
+    }
+
+    function showDialog(title, message, options, onOption, escapeOption=-1) {
+        window.addEventListener('keydown', onDialogPress);
+
+        var color = [term.LIGHTGRAY,term.BLACK];
+        var selectedColor = [term.BLACK, term.LIGHTGRAY];
+
+        var selectedOption = 0;
+        var messageLines = message.split('\n');
+        messageLines.push(''); // extra line to separate options
+        var messageRect = textRectFromLines(messageLines);
+        var optionsRect = textRectFromLines(options);
+
+        var boxWidth = Math.max(messageRect[0], optionsRect[0])
+            
+        var box = vecAdd( 
+            [4,4], 
+            [ boxWidth, messageRect[1] + optionsRect[1] ]
+        );
+
+        var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
+        var paddedOptions = textPadWithSpaces(options, boxWidth);
+
+        t.HoldFlush();
+        drawDialog();
+        t.Flush();
+
+        function drawDialog() {
+            
+            var cursor = vecAdd(offset,[2,2]);
+            t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
+
+            printLineWithCursorAndColor(messageLines, -1);
+            printLineWithCursorAndColor(paddedOptions, selectedOption);
+
+            function printLineWithCursorAndColor(lines, selectIdx) {
+                for (var i=0;i<lines.length;i++) {
+                    var line = lines[i];
+                    t.SetCursorXY(cursor[0], cursor[1]);
+                    t.Print(line, selectIdx == i ? selectedColor : color);
+    
+                    ++cursor[1];
+                }
+            }
+        }
+
+        function onDialogPress(e) {
+            if ('Escape' === e.key && escapeOption > -1) {
+                selectedOption = escapeOption;
+                closeDialog();
+            }
+            else if ('ArrowUp' === e.key) {
+                selectedOption = rangedOption(selectedOption-1, options.length);
+                drawDialog();
+            }
+            else if ('ArrowDown' === e.key) {
+                selectedOption = rangedOption(selectedOption+1, options.length);
+                drawDialog();
+            }
+            else if ('Enter' === e.key) {
+                closeDialog();
+            }
+        }
+
+        function closeDialog() {
+            window.removeEventListener('keydown', onDialogPress);
+            onOption(selectedOption);
+        }
+    } 
+
+    function rangedOption(val, range) {
+        return (val + range) % range;
+    }
+
+    function textPadWithSpaces(lines, padSize) {
+        var ret = [];
+        for (var line of lines) {
+            ret.push( [line, nChr(' ', padSize-line.length)].join(''));
+        }
+
+        return ret;
+    }
+
+    function nChr(chr, times) {
+        var ret = [];
+        for (var i=0;i<times;i++) {
+            ret.push(chr);
+        }
+
+        return ret.join('');
+    }
+
+    function textRectFromLines(lines) {
+        var maxWidth = 0;
+        for (var line of lines) {
+            maxWidth = Math.max(maxWidth, line.length);
+        }
+
+        return [maxWidth, lines.length];
     }
 
 }
