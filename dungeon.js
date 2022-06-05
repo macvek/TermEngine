@@ -14,6 +14,8 @@ function dungeon() {
     var radius = 60;
     var viewMap = buildViewMap(radius);
     var shadeColor = term.GRAY;
+    var neverSeenSymbol = specialChars.LIGHTSHADE;
+    var alreadySeenSymbol = '~';
 
     drawOnMap([
         "                                                                                ",
@@ -84,7 +86,10 @@ function dungeon() {
     }
 
     function EntityPlayer() {
-        return dynamicObject('@','Player', activatePlayer);
+        var ent = dynamicObject('@','Player', activatePlayer);
+        ent.color = term.WHITE;
+
+        return ent;
     }
 
     function EntityMonster() {
@@ -104,7 +109,7 @@ function dungeon() {
 
     function EntityFloor() {
         var floor = dynamicObject(' ', 'Floor');
-        floor.symbolAndColor = drawFuncShowShadeIfEverSeen;
+        floor.symbolAndColor = createDrawFuncFor2Faces(' ', alreadySeenSymbol);
         return floor;
     }
     
@@ -134,6 +139,13 @@ function dungeon() {
 
     function drawFuncInvisible() {
         return [];
+    }
+
+    function createDrawFuncFor2Faces(vis, hidden) {
+        return function() {
+            this.symbol = this.inSight ? vis : hidden;
+            return drawFuncShowShadeIfEverSeen.apply(this);
+        }
     }
 
     function drawFuncShowIfVisible() {
@@ -643,7 +655,7 @@ function dungeon() {
                 t.PutColorXY(x, y, [symbolAndColor[1], term.BLACK]);
             }
             else {
-                t.PutCharXY(x, y, '~');
+                t.PutCharXY(x, y, neverSeenSymbol);
                 t.PutColorXY(x, y, [shadeColor, term.BLACK]);
             }
         });

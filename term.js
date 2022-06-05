@@ -15,7 +15,12 @@ var term = {
 };
 
 var specialChars = {
-    DOT:'•'
+    DOT:'•',
+    LIGHTSHADE:'░',
+    MEDIUMSHADE:'▒',
+    DARKSHADE:'▓',
+    FULLBLOCK:'█',
+
 };
 
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
