@@ -276,86 +276,92 @@ function dungeon() {
         }
         else if ('Enter' === e.key) {
             keyFocus = Focuses.DIALOG;
-            showDialog(function() {
+            var options = [
+                "Option 1",
+                "Option 2 2 2",
+                "Option 3",
+            ];
+
+            showDialog("Dialog", "This is a sample\nPossibly multiline text", options, function(optionIdx) {
+                console.log(options[optionIdx]);
                 keyFocus = Focuses.PLAYER;
                 redraw();
             });
         }
     }
 
-    function showDialog(onClose) {
-
+    function showDialog(title, message, options, onOption, escapeOption=-1) {
         window.addEventListener('keydown', onDialogPress);
 
+        var color = [term.LIGHTGRAY,term.BLACK];
+        var selectedColor = [term.BLACK, term.LIGHTGRAY];
+
         var selectedOption = 0;
-        var options = [
-            "Option 1",
-            "Option 2 2 2",
-            "Option 3",
-        ];
+        var messageLines = message.split('\n');
+        messageLines.push(''); // extra line to separate options
+        var messageRect = textRectFromLines(messageLines);
+        var optionsRect = textRectFromLines(options);
+
+        var boxWidth = Math.max(messageRect[0], optionsRect[0])
+            
+        var box = vecAdd( 
+            [4,4], 
+            [ boxWidth, messageRect[1] + optionsRect[1] ]
+        );
+
+        var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
+        var paddedOptions = textPadWithSpaces(options, boxWidth);
 
         t.HoldFlush();
         drawDialog();
         t.Flush();
 
         function drawDialog() {
-
-            var title = " DIALOG ";
-            var message = "This is a\nMultiline Multiline Multiline\nText";
-
-            var messageLines = message.split('\n');
-            var messageRect = textRectFromLines(messageLines);
-            var optionsRect = textRectFromLines(options);
-
-            var boxWidth = Math.max(messageRect[0], optionsRect[0])
             
-            var box = vecAdd( 
-                [4,4], 
-                [ boxWidth, messageRect[1] + optionsRect[1] ]
-            );
-
-            var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
-
             var cursor = vecAdd(offset,[2,2]);
-            var color = [term.LIGHTGRAY,term.BLACK];
-            var selectedColor = [term.BLACK, term.LIGHTGRAY];
-
             t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
 
-            for (var line of messageLines) {
-                t.SetCursorXY(cursor[0], cursor[1]);
-                t.Print(line);
+            printLineWithCursorAndColor(messageLines, -1);
+            printLineWithCursorAndColor(paddedOptions, selectedOption);
 
-                ++cursor[1];
-            }
-            ++cursor[1];
-
-            var paddedOptions = textPadWithSpaces(options, boxWidth);
-            for (var i=0;i<paddedOptions.length;i++) {
-                var line = paddedOptions[i];
-                t.SetCursorXY(cursor[0], cursor[1]);
-                t.Print(line, selectedOption == i ? selectedColor : color);
-
-                ++cursor[1];
+            function printLineWithCursorAndColor(lines, selectIdx) {
+                for (var i=0;i<lines.length;i++) {
+                    var line = lines[i];
+                    t.SetCursorXY(cursor[0], cursor[1]);
+                    t.Print(line, selectIdx == i ? selectedColor : color);
+    
+                    ++cursor[1];
+                }
             }
         }
 
         function onDialogPress(e) {
-            if ('Escape' === e.key) {
-                window.removeEventListener('keydown', onDialogPress);
-                onClose();
+            if ('Escape' === e.key && escapeOption > -1) {
+                selectedOption = escapeOption;
+                closeDialog();
             }
             else if ('ArrowUp' === e.key) {
-                selectedOption = ((selectedOption-1) + options.length) % options.length;
+                selectedOption = rangedOption(selectedOption-1, options.length);
                 drawDialog();
             }
             else if ('ArrowDown' === e.key) {
-                selectedOption = (selectedOption+1) % options.length;
+                selectedOption = rangedOption(selectedOption+1, options.length);
                 drawDialog();
             }
-        
+            else if ('Enter' === e.key) {
+                closeDialog();
+            }
+        }
+
+        function closeDialog() {
+            window.removeEventListener('keydown', onDialogPress);
+            onOption(selectedOption);
         }
     } 
+
+    function rangedOption(val, range) {
+        return (val + range) % range;
+    }
 
     function textPadWithSpaces(lines, padSize) {
         var ret = [];
