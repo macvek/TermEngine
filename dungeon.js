@@ -12,6 +12,7 @@ function dungeon() {
     var cursorPos = null;
 
     var radius = 60;
+    var inSightTestEnabled = true;
     var viewMap = buildViewMap(radius);
     var shadeColor = term.GRAY;
     var neverSeenSymbol = specialChars.LIGHTSHADE;
@@ -297,6 +298,8 @@ function dungeon() {
                 "Cursor",
                 "Reset map",
                 "Animate move",
+                "Toggle visual check",
+                "Forget visual state",
                 "Radius 80",
                 "Radius 60",
                 "Radius 45",
@@ -320,8 +323,17 @@ function dungeon() {
                 else if (optionIdx == 3) {
                     animateMove();
                 }
+                else if (optionIdx == 4) {
+                    toggleVisCheck();
+                    keyFocus = Focuses.PLAYER;
+                }
+                else if (optionIdx == 5) {
+                    forgetVisualState();
+                    keyFocus = Focuses.PLAYER;
+                }
+
                 else {
-                    var base = 4;
+                    var base = 6;
                     switch(optionIdx) {
                         case base+0: radius = 80; break;
                         case base+1: radius = 60; break;
@@ -331,6 +343,7 @@ function dungeon() {
                         case base+5: radius = 5; break;
                         case base+6: radius = 3; break;
                     }
+                    viewMap = buildViewMap(radius);
                     keyFocus = Focuses.PLAYER;
                 }
                 
@@ -380,8 +393,19 @@ function dungeon() {
                 keyFocus = Focuses.PLAYER;
             }
         },10);
+    }
 
+    function toggleVisCheck() {
+        inSightTestEnabled = !inSightTestEnabled;
+    }
 
+    function forgetVisualState() {
+        iterateOverMap((x,y) => {
+            for (var obj of map.getAll([x,y])) {
+                console.log(obj);
+                obj.everInSight = false;
+            }
+        });
     }
 
 
@@ -520,8 +544,7 @@ function dungeon() {
     function redraw() {
         window.requestAnimationFrame(function() {
             t.HoldFlush();
-            resetInSightState();
-            inSightCheck();
+            performInSightValidation();
             drawObjects();
             if (cursorPos) {
                 drawCursor();
@@ -530,10 +553,17 @@ function dungeon() {
         });
     }
 
+    function performInSightValidation() {
+        resetInSightState();
+        if (inSightTestEnabled) {
+            inSightCheck();
+        }
+    }
+
     function resetInSightState() {
         iterateOverMap(function(x,y) {
            for (obj of map.getAll([x,y])) {
-               obj.inSight = false;
+               obj.inSight = !inSightTestEnabled;
            }
         });
     }
