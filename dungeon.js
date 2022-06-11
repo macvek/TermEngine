@@ -1,5 +1,7 @@
 window.addEventListener('load', dungeon);
 
+function noop(){};
+
 function dungeon() {
     var t = TermStart();
     var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR'])
@@ -347,7 +349,46 @@ function dungeon() {
     }
 
     function throwAnimationOnCursor() {
+        var dest = vecAdd([0.5, 0.5], cursorPos);
+        var src = vecAdd([0.5, 0.5], player.pos);
 
+        var vector = vecSubst(dest, src);
+        var vLen = vecLength(vector);
+        var vUnit = vecUnit(vector);
+
+        var v = calculateVector(src, dest);
+
+        var route = traceTo(v, src, () => false);
+        var counter = 0;
+
+        var storeFocus = keyFocus;
+        keyFocus = "ANIMATION";
+
+        var interval = setInterval(processAnimation, 100);
+        function processAnimation() {
+            redraw(function() {
+                if (counter < vLen) {
+                    stepAnimation();
+                }
+                else {
+                    stopAnimation();
+                }
+            });
+        }
+
+        function stepAnimation() {
+            var place = route[counter++];
+            t.SetCursorXY(place[0], place[1]);
+            t.Print('x');
+        }
+
+        function stopAnimation() {
+            keyFocus = storeFocus;
+            clearInterval(interval);
+        }
+
+
+        
     }
 
     function explodeAnimationOnOnCursor() {
@@ -616,13 +657,14 @@ function dungeon() {
         }
     }
 
-    function redraw() {
+    function redraw(postRedraw=noop) {
         window.requestAnimationFrame(function() {
             t.HoldFlush();
             drawObjects();
             if (cursorPos) {
                 drawCursor();
             }
+            postRedraw();
             t.Flush();
         });
     }
@@ -753,30 +795,7 @@ function dungeon() {
                     var lastPoint = route[route.length-1];
                     return arrayEquals(lastPoint, testPos);
 
-                    function traceTo(vector, startFrom, resolver) {
-                        var vector = mesh[abY][abX];
-                        var v = vector.v;
-                        var vLen = vector.len;
-    
-                        var cursor = [].concat(startFrom);
-                        var route = [];
-                        if (vLen == 0) {
-                            route.push(startFrom);
-                        }
-
-                        for (var i=0;i<vLen;i++) {
-                            cursor = vecAdd(cursor, v);
-                            var point = vecApply(cursor, Math.round);
-                            var isBlocker = resolver(point);
-                            route.push(point);
-                            if (isBlocker) {
-                                break;
-                            }
-                            
-                        }
-
-                        return route;
-                    }
+                    
                 }
             }
         }
@@ -793,17 +812,7 @@ function dungeon() {
 
         return ret;
 
-        function calculateVector(here, target) {
-            var lineStart = vecAdd(here, [0.5, 0.5]);
-            var lineEnd = vecAdd(target, [0.5, 0.5]);
-
-            var dir = vecSubst(lineEnd, lineStart);
-            var vector = { 
-                v:vecUnit(dir), 
-                len:Math.round(vecLength(dir)) 
-            }
-            return vector;
-        }
+        
 
     }
 
@@ -936,6 +945,44 @@ function dungeon() {
         }
 
         return ret;
+    }
+
+
+    function calculateVector(here, target) {
+        var lineStart = vecAdd(here, [0.5, 0.5]);
+        var lineEnd = vecAdd(target, [0.5, 0.5]);
+
+        var dir = vecSubst(lineEnd, lineStart);
+        var vector = { 
+            v:vecUnit(dir), 
+            len:Math.round(vecLength(dir)) 
+        }
+        return vector;
+    }
+
+
+    function traceTo(vector, startFrom, resolver) {
+        var v = vector.v;
+        var vLen = vector.len;
+
+        var cursor = [].concat(startFrom);
+        var route = [];
+        if (vLen == 0) {
+            route.push(startFrom);
+        }
+
+        for (var i=0;i<vLen;i++) {
+            cursor = vecAdd(cursor, v);
+            var point = vecApply(cursor, Math.round);
+            var isBlocker = resolver(point);
+            route.push(point);
+            if (isBlocker) {
+                break;
+            }
+            
+        }
+
+        return route;
     }
 
     function arrayDrop(arr, what) {
