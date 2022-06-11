@@ -349,14 +349,7 @@ function dungeon() {
     }
 
     function throwAnimationOnCursor() {
-        var dest = vecAdd([0.5, 0.5], cursorPos);
-        var src = vecAdd([0.5, 0.5], player.pos);
-
-        var vector = vecSubst(dest, src);
-        var vLen = vecLength(vector);
-        var vUnit = vecUnit(vector);
-
-        var v = calculateVector(src, dest);
+        var v = calculateVector(src, cursorPos);
 
         var route = traceTo(v, src, () => false);
         var counter = 0;
@@ -367,7 +360,7 @@ function dungeon() {
         var interval = setInterval(processAnimation, 100);
         function processAnimation() {
             redraw(function() {
-                if (counter < vLen) {
+                if (counter < v.len) {
                     stepAnimation();
                 }
                 else {
@@ -386,9 +379,6 @@ function dungeon() {
             keyFocus = storeFocus;
             clearInterval(interval);
         }
-
-
-        
     }
 
     function explodeAnimationOnOnCursor() {
