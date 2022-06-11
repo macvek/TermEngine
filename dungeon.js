@@ -4,7 +4,7 @@ function noop(){};
 
 function dungeon() {
     var t = TermStart();
-    var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR'])
+    var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR', 'ANIMATOR'])
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
     var keyFocus;
     var map;
@@ -290,7 +290,7 @@ function dungeon() {
                 placeZombieOnCursor,
                 placeMonsterOnCursor,
                 throwAnimationOnCursor,
-                explodeAnimationOnOnCursor
+                explodeAnimationOnCursor
             ];
 
             if (cursorSpaceBar >= 0 && cursorSpaceBar < spaceBarAction.length) {
@@ -356,38 +356,47 @@ function dungeon() {
         var v = calculateVector(startPos, endPos);
 
         var route = traceTo(v, startPos, () => false);
-        var counter = 0;
+        
+        animator(40, route.length, stepAnimation);
 
-        var storeFocus = keyFocus;
-        keyFocus = "ANIMATION";
-
-        var interval = setInterval(processAnimation, 40);
-        function processAnimation() {
-            redraw(function() {
-                if (counter < v.len) {
-                    stepAnimation();
-                }
-                else {
-                    stopAnimation();
-                }
-            });
+        function stepAnimation(frame) {
+            if (frame == route.length) {
+                redraw();
+            }
+            else {
+                redraw( function() {
+                    var place = route[frame];
+                    t.SetCursorXY(place[0], place[1]);
+                    t.Print(frames[frame % frames.length]);
+                });
+            }
         }
 
-        function stepAnimation() {
-            var frame = counter++;
-            var place = route[frame];
-            t.SetCursorXY(place[0], place[1]);
-            t.Print(frames[frame % frames.length]);
+    }
+
+    function explodeAnimationOnCursor() {
+
+    }
+
+    function animator(frameDelay, framesCount, onFrame) {
+        var storeFocus = keyFocus;
+        keyFocus = Focuses.ANIMATOR;
+
+        var frame = 0;
+        var interval = setInterval(processAnimation, frameDelay);
+
+        function processAnimation() {
+            onFrame(frame);
+            if (frame == framesCount) {
+                stopAnimation();
+            }
+            ++frame;
         }
 
         function stopAnimation() {
             keyFocus = storeFocus;
             clearInterval(interval);
         }
-    }
-
-    function explodeAnimationOnOnCursor() {
-
     }
 
     function onPlayerMove(e) {
