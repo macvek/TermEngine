@@ -349,15 +349,19 @@ function dungeon() {
     }
 
     function throwAnimationOnCursor() {
-        var v = calculateVector(src, cursorPos);
+        throwAnimation(player.pos, cursorPos, "-/|\\".split(''));
+    }
 
-        var route = traceTo(v, src, () => false);
+    function throwAnimation(startPos, endPos, frames) {
+        var v = calculateVector(startPos, endPos);
+
+        var route = traceTo(v, startPos, () => false);
         var counter = 0;
 
         var storeFocus = keyFocus;
         keyFocus = "ANIMATION";
 
-        var interval = setInterval(processAnimation, 100);
+        var interval = setInterval(processAnimation, 40);
         function processAnimation() {
             redraw(function() {
                 if (counter < v.len) {
@@ -370,9 +374,10 @@ function dungeon() {
         }
 
         function stepAnimation() {
-            var place = route[counter++];
+            var frame = counter++;
+            var place = route[frame];
             t.SetCursorXY(place[0], place[1]);
-            t.Print('x');
+            t.Print(frames[frame % frames.length]);
         }
 
         function stopAnimation() {
