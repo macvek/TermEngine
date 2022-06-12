@@ -23,6 +23,12 @@ function dungeon() {
     var unknownAsQuestionMark = false;
 
     initLevel();
+
+    // debug
+    enterCursorMode();
+    cursorPos = [51,10];
+    // debug
+
     preTurn();
     redraw();
 
@@ -375,6 +381,34 @@ function dungeon() {
     }
 
     function explodeAnimationOnCursor() {
+        var center = [].concat(cursorPos);
+
+        var frameCount = 5;
+        animator(200, frameCount, anim);
+
+        function anim(frame) {
+            if (frame === frameCount) {
+                redraw();
+            }
+            else {
+                redraw( () => drawRing(frame));
+            }
+        }
+
+        function drawRing(frame) {
+            var topLeft = vecAdd(center, [-frame-1, -frame-1]);
+            var bottomRight = vecAdd(center, [frame+2, frame+2]);
+            var widthHeight = vecSubst(bottomRight, topLeft);
+            var N = null;
+
+            var border = [
+                'x','x','x',
+                'x', N ,'x',
+                'x','x','x'
+            ];
+            t.DrawBox(topLeft[0], topLeft[1], widthHeight[0], widthHeight[1], border, []);
+        }
+
 
     }
 
