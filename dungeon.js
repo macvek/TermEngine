@@ -1,7 +1,5 @@
 window.addEventListener('load', dungeon);
 
-function noop(){};
-
 function dungeon() {
     var t = TermStart();
     var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR', 'ANIMATOR'])
@@ -21,6 +19,8 @@ function dungeon() {
     var neverSeenSymbol = specialChars.LIGHTSHADE;
     var alreadySeenSymbol = '~';
     var unknownAsQuestionMark = false;
+    var redrawTriggered = false;
+    var postRedrawQueue = [];
 
     initLevel();
 
@@ -392,6 +392,7 @@ function dungeon() {
             }
             else {
                 redraw( () => drawRing(frame));
+                redraw( () => drawRing(frame+1));
             }
         }
 
@@ -695,16 +696,28 @@ function dungeon() {
         }
     }
 
-    function redraw(postRedraw=noop) {
-        window.requestAnimationFrame(function() {
-            t.HoldFlush();
-            drawObjects();
-            if (cursorPos) {
-                drawCursor();
-            }
-            postRedraw();
-            t.Flush();
-        });
+    function redraw(postRedrawFunc) {
+        if (postRedrawFunc) {
+            postRedrawQueue.push(postRedrawFunc);
+        }
+        
+        if (!redrawTriggered) {
+            redrawTriggered = true;
+            window.requestAnimationFrame(function() {
+                t.HoldFlush();
+                drawObjects();
+                if (cursorPos) {
+                    drawCursor();
+                }
+
+                for (var func of postRedrawQueue) {
+                    func();
+                }
+                postRedrawQueue = [];
+                t.Flush();
+                redrawTriggered = false;
+            });
+        }
     }
 
     function performInSightValidation() {
