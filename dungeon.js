@@ -24,11 +24,6 @@ function dungeon() {
 
     initLevel();
 
-    // debug
-    enterCursorMode();
-    cursorPos = [51,10];
-    // debug
-
     preTurn();
     redraw();
 
@@ -388,13 +383,14 @@ function dungeon() {
         var animFrameCount = 6;
         
         var ringAnimations = [
-            onFrameRange(0, animFrameCount, drawRingAnim),
-            onFrameRange(1, animFrameCount, drawRingAnim),
-            onFrameRange(3, animFrameCount, drawRingAnim)
+            onFrameRange(0, animFrameCount, f => drawRingAnim(f, term.RED) ),
+            onFrameRange(1, animFrameCount, f => drawRingAnim(f, term.YELLOW)),
+            onFrameRange(2, animFrameCount, f => drawRingAnim(f, term.LIGHTGRAY)),
+            onFrameRange(3, animFrameCount, f => drawRingAnim(f, term.GRAY))
         ]
         
         var frameCount = animFrameCount + 3;
-        animator(80, frameCount, anim);
+        animator(40, frameCount, anim);
 
 
         function anim(frame) {
@@ -406,16 +402,21 @@ function dungeon() {
             }
         }
 
-        function drawRingAnim(frame) {
-            ringScanCenterRadius(center, frame, onDrawField);
+        function drawRingAnim(frame, color) {
+            ringScanCenterRadius(center, frame, (x,y) => onDrawField(x,y,color));
         }
 
-        function onDrawField(x,y) {
-            var pos = [x,y];
-            if (isPosVisible(pos) && !blocksMapSight(pos) && visibleBitmap.test(pos)) {
-                t.SetCursorXY(x, y);
-                t.Print('x');
+        function onDrawField(x,y, color) {
+            if (explodeVisTest([x,y])) {
+                t.SetCursorXY(x,y);
+                var currentColor = t.GetColorXY(x,y);
+                t.PutColorXY(x,y, [color, currentColor[1]]);
+                t.Print('#');
             }
+        }
+
+        function explodeVisTest(pos) {
+            return isPosVisible(pos) && !blocksMapSight(pos) && visibleBitmap.test(pos);
         }
     }
 
