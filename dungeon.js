@@ -661,58 +661,44 @@ function dungeon() {
     }
 
     function scrollBox() {
+        var wnd = new ScrollBox(10, 4, "A\nB\nC\nD\nE\nF\nG\nH");
         t.HoldFlush();
-        
-        var color = [term.WHITE, term.BLACK];
-        var title = " TITLE ";
-
-        var lines = [];
-        for (var i=0;i<15;i++) {
-            lines.push(`My line number is ${i} and that is it`);
-        }
-
-        var textBox = textRectFromLines(lines);
-
-        var box = vecAdd([2,2],[textBox[0], 10]);
-        var boxOffset = offsetToCenterBoxOnScreen(box);
-
-        t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
-        
-        var cursor = vecAdd(boxOffset,[1,1]);
-        t.SetCursorXY(cursor[0], cursor[1]);
-
-        var scrollOffset = 2;
-
-        var visibleLines = [];
-        for (var i=0;i<10;i++) {
-            visibleLines.push(lines[i+scrollOffset]);
-        }
-
-        printLineWithCursorAndColor(visibleLines, -1, color);
-        
-        var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
-        var scrollBarHeight = box[1]-2;
-
-        drawScrollBar(scrollBarPos, scrollBarHeight, 0, lines.length);
-
+        wnd.scrollOffset = 0;
+        wnd.draw();
         t.Flush();
+       
 
-        function drawScrollBar(pos, height, topLineIndex, allLinesCount) {
-            if (height >= allLinesCount) {
-                return;
+    }
+
+    function ScrollBox(wndWidth, wndHeight, text, title='', color=[term.LIGHTGRAY, term.BLACK], pos=null) {
+        this.scrollOffset=0;
+
+        var lines = fillWithLineBreaks(text.split("\n"), wndWidth);
+        
+        var box = vecAdd([2,2],[wndWidth, wndHeight]);
+        
+        var scrollBarHeight = box[1]-2;
+        var boxOffset = pos ? pos : offsetToCenterBoxOnScreen(box);
+        
+        this.draw = function() {
+            t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
+            var cursor = vecAdd(boxOffset,[1,1]);
+            t.SetCursorXY(cursor[0], cursor[1]);
+
+            var visibleLines = [];
+            var scrollPos = Math.max(0, Math.min(this.scrollOffset, lines.length-scrollBarHeight));
+            var limit = scrollBarHeight+scrollPos;
+            for (var i=scrollPos;i<limit;i++) {
+                visibleLines.push(lines[i]);
             }
 
-            var visibleLinesCount  = height;
-            var barHeight = Math.floor(height * visibleLinesCount/allLinesCount);
-            var maxHeight = height - barHeight;
+            printLineWithCursorAndColor(visibleLines, -1, color);
             
-            var expectedPos = Math.floor(height* topLineIndex/allLinesCount);
-            var barPos = Math.max(0, Math.min(maxHeight, expectedPos));
-            
-            for (var i=barPos;i<barPos+barHeight;i++) {
-                t.SetCursorXY(pos[0], pos[1]+i);
-                t.Print(specialChars.LIGHTSHADE);
-            }
+            var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
+
+            drawScrollBar(scrollBarPos, scrollBarHeight, scrollPos, lines.length);
+
+            t.Flush();
         }
     }
 
@@ -1324,6 +1310,43 @@ function dungeon() {
 
     function offsetToCenterBoxOnScreen(box) {
         return vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
+    }
+
+    function drawScrollBar(pos, height, topLineIndex, allLinesCount) {
+        if (height >= allLinesCount) {
+            return;
+        }
+
+        var visibleLinesCount = height;
+        var barHeight = Math.floor(height * visibleLinesCount/allLinesCount);
+        var maxHeight = height - barHeight;
+
+        var expectedPos = Math.floor(height* topLineIndex/allLinesCount);
+        var barPos = Math.max(0, Math.min(maxHeight, expectedPos));
+
+        for (var i=barPos;i<barPos+barHeight;i++) {
+            t.SetCursorXY(pos[0], pos[1]+i);
+            t.Print(specialChars.LIGHTSHADE);
+        }
+    }
+
+    function fillWithLineBreaks(lines, trimWidth) {
+        if (trimWidth < 2) {
+            console.error("Incorrect trimWidth");
+            return [];
+        }
+        var ret = [];
+        for (var line of lines) {
+            var eachLine = line;
+            while (eachLine.length > trimWidth) {
+                ret.push(eachLine.substring(0, trimWidth-1)+specialChars.LINEBREAK);
+                eachLine = eachLine.substring(trimWidth-1, line.length);
+            }
+            
+            ret.push(eachLine);
+            
+        }
+        return ret;
     }
     
     function debugScan(cells, onCell) {
