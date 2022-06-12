@@ -420,7 +420,12 @@ function dungeon() {
             'x', N ,'x',
             'x','x','x'
         ];
-        t.DrawBox(topLeft[0], topLeft[1], widthHeight[0], widthHeight[1], border, []);
+
+        ringScanCenterRadius(center, radius, (x,y) => {
+            t.SetCursorXY(x, y);
+            t.Print('x');
+        });
+        
     }
 
     function onFrameRange(shift, max, onFrame) {
@@ -1185,6 +1190,15 @@ function dungeon() {
         }
     }
 
+    function ringScanCenterRadius(center, radius, onCell) {
+        return ringScan({
+            top: center[1]-radius-1,
+            left: center[0]-radius-1,
+            right: center[0]+radius+1,
+            bottom: center[1]+radius+1
+        }, onCell);
+    }
+    
     function ringScan(ringParams, onCell) {
         var left = ringParams.left;
         var top = ringParams.top;
