@@ -386,9 +386,9 @@ function dungeon() {
         var animFrameCount = 6;
         
         var ringAnimations = [
-            onFrameRange(0, animFrameCount, drawRing),
-            onFrameRange(1, animFrameCount, drawRing),
-            onFrameRange(3, animFrameCount, drawRing)
+            onFrameRange(0, animFrameCount, drawRingAnim),
+            onFrameRange(1, animFrameCount, drawRingAnim),
+            onFrameRange(3, animFrameCount, drawRingAnim)
         ]
         
         var frameCount = animFrameCount + 3;
@@ -404,21 +404,23 @@ function dungeon() {
             }
         }
 
-        function drawRing(frame) {
-            var topLeft = vecAdd(center, [-frame-1, -frame-1]);
-            var bottomRight = vecAdd(center, [frame+2, frame+2]);
-            var widthHeight = vecSubst(bottomRight, topLeft);
-            var N = null;
-
-            var border = [
-                'x','x','x',
-                'x', N ,'x',
-                'x','x','x'
-            ];
-            t.DrawBox(topLeft[0], topLeft[1], widthHeight[0], widthHeight[1], border, []);
+        function drawRingAnim(frame) {
+            drawRing(center, frame);
         }
+    }
 
+    function drawRing(center, radius) {
+        var topLeft = vecAdd(center, [-radius-1, -radius-1]);
+        var bottomRight = vecAdd(center, [radius+2, radius+2]);
+        var widthHeight = vecSubst(bottomRight, topLeft);
+        var N = null;
 
+        var border = [
+            'x','x','x',
+            'x', N ,'x',
+            'x','x','x'
+        ];
+        t.DrawBox(topLeft[0], topLeft[1], widthHeight[0], widthHeight[1], border, []);
     }
 
     function onFrameRange(shift, max, onFrame) {
@@ -757,9 +759,7 @@ function dungeon() {
         var max = [radius*2+1, radius*2+1];
 
 
-        if (false) debugScan([ vecAdd(radPoint, [3,2]) ], checkCell);
-        if (false) linearScan(max, checkCell);
-        outboundSpiral(max, checkCell);
+        outboundSpiralScan(max, checkCell);
 
         function checkCell(aX,aY) {
             var pos = vecAdd([aX,aY], center);
@@ -770,47 +770,7 @@ function dungeon() {
                 }
             } 
         }
-
-        function debugScan(cells, onCell) {
-            for (var cell of cells) {
-                onCell(cell[0],cell[1]);
-            }
-        }
-
-        function linearScan(boundary, onCell) {
-            for (var y=0;y<boundary[1];y++)
-            for (var x=0;x<boundary[0];x++) {
-                onCell(x,y);
-            }   
-        }
-
         
-
-        function outboundSpiral(boundary, onCell) {
-            var left = 0;
-            var top = 0;
-            var right = boundary[0]-1;
-            var bottom = boundary[1]-1;
-
-            for(;;) {
-                for (var i=left;i<=right;i++) onCell(i,top);
-                ++top;
-
-                for (var i=top;i<=bottom;i++) onCell(right, i);
-                --right;
-
-                for (var i=right; i >= left; i--) onCell(i, bottom);
-                --bottom;
-
-                for (var i=bottom; i >= top; i--) onCell(left, i);
-                ++left;
-
-                if (left === right && top == bottom) {
-                    onCell(left, top);
-                    return;
-                }
-            }
-        }
     }
 
     function buildViewMap(radius) {
@@ -1208,4 +1168,60 @@ function dungeon() {
         }
     }
 
+    function outboundSpiralScan(boundary, onCell) {
+        var ringParams = {
+            top:0,
+            left:0,
+            right: boundary[0]-1,
+            bottom:boundary[1]-1
+        }
+
+        for(;;) {
+            ringParams = ringScan(ringParams, onCell);
+            if (ringParams.left === ringParams.right && ringParams.top == ringParams.bottom) {
+                onCell(ringParams.left, ringParams.top);
+                return;
+            }
+        }
+    }
+
+    function ringScan(ringParams, onCell) {
+        var left = ringParams.left;
+        var top = ringParams.top;
+        var right = ringParams.right;
+        var bottom = ringParams.bottom;
+
+        for (var i=left;i<=right;i++) onCell(i,top);
+        ++top;
+
+        for (var i=top;i<=bottom;i++) onCell(right, i);
+        --right;
+
+        for (var i=right; i >= left; i--) onCell(i, bottom);
+        --bottom;
+
+        for (var i=bottom; i >= top; i--) onCell(left, i);
+        ++left;
+
+        return {
+            top:top,
+            left:left,
+            right:right,
+            bottom:bottom
+        }
+
+    }
+
+    function linearScan(boundary, onCell) {
+        for (var y=0;y<boundary[1];y++)
+        for (var x=0;x<boundary[0];x++) {
+            onCell(x,y);
+        }   
+    }
+    
+    function debugScan(cells, onCell) {
+        for (var cell of cells) {
+            onCell(cell[0],cell[1]);
+        }
+    }
 }
