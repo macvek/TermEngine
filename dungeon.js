@@ -383,16 +383,16 @@ function dungeon() {
     function explodeAnimationOnCursor() {
         var center = [].concat(cursorPos);
 
-        var animFrameCount = 5;
+        var animFrameCount = 6;
         
         var ringAnimations = [
-            onFrameRange(0, 5, drawRing),
-            onFrameRange(1, 5, drawRing),
-            onFrameRange(2, 5, drawRing)
+            onFrameRange(0, animFrameCount, drawRing),
+            onFrameRange(1, animFrameCount, drawRing),
+            onFrameRange(3, animFrameCount, drawRing)
         ]
         
-        var frameCount = animFrameCount + ringAnimations.length;
-        animator(200, frameCount, anim);
+        var frameCount = animFrameCount + 3;
+        animator(80, frameCount, anim);
 
 
         function anim(frame) {
