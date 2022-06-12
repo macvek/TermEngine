@@ -382,6 +382,8 @@ function dungeon() {
 
     function explodeAnimationOnCursor() {
         var center = [].concat(cursorPos);
+        var visibleCells = inSightCells(center);
+        var visibleBitmap = posListToBitmap(visibleCells);
 
         var animFrameCount = 6;
         
@@ -405,18 +407,16 @@ function dungeon() {
         }
 
         function drawRingAnim(frame) {
-            drawRing(center, frame);
+            ringScanCenterRadius(center, frame, onDrawField);
         }
-    }
 
-    function drawRing(center, radius) {
-        ringScanCenterRadius(center, radius, (x,y) => {
-            if (isPosVisible([x,y])) {
+        function onDrawField(x,y) {
+            var pos = [x,y];
+            if (isPosVisible(pos) && !blocksMapSight(pos) && visibleBitmap.test(pos)) {
                 t.SetCursorXY(x, y);
                 t.Print('x');
             }
-        });
-        
+        }
     }
 
     function onFrameRange(shift, max, onFrame) {
@@ -767,7 +767,12 @@ function dungeon() {
             ret[pos[1]][pos[0]] = 1;
         }
 
-        return ret;
+        return {
+            bitmap: ret,
+            test: function(pos) {
+                return this.bitmap[pos[1]] && this.bitmap[pos[1]][pos[0]];
+            }
+        };
     }
 
     function inSightCells(viewPoint) {
