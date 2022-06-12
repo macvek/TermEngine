@@ -383,16 +383,24 @@ function dungeon() {
     function explodeAnimationOnCursor() {
         var center = [].concat(cursorPos);
 
-        var frameCount = 5;
+        var animFrameCount = 5;
+        
+        var ringAnimations = [
+            onFrameRange(0, 5, drawRing),
+            onFrameRange(1, 5, drawRing),
+            onFrameRange(2, 5, drawRing)
+        ]
+        
+        var frameCount = animFrameCount + ringAnimations.length;
         animator(200, frameCount, anim);
+
 
         function anim(frame) {
             if (frame === frameCount) {
                 redraw();
             }
             else {
-                redraw( () => drawRing(frame));
-                redraw( () => drawRing(frame+1));
+                redraw( () => applyAll(ringAnimations, [frame]));
             }
         }
 
@@ -411,6 +419,15 @@ function dungeon() {
         }
 
 
+    }
+
+    function onFrameRange(shift, max, onFrame) {
+        return function(frame) {
+            var shifted = -shift+frame;
+            if (shifted >= 0 && shifted < max) {
+                onFrame(shifted);
+            }
+        }
     }
 
     function animator(frameDelay, framesCount, onFrame) {
@@ -710,9 +727,7 @@ function dungeon() {
                     drawCursor();
                 }
 
-                for (var func of postRedrawQueue) {
-                    func();
-                }
+                applyAll(postRedrawQueue);
                 postRedrawQueue = [];
                 t.Flush();
                 redrawTriggered = false;
@@ -1185,6 +1200,12 @@ function dungeon() {
         }
 
         return [maxWidth, lines.length];
+    }
+
+    function applyAll(listToApply, args) {
+        for (var callback of listToApply) {
+            callback.apply(null, args);
+        }
     }
 
 }
