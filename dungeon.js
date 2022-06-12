@@ -2,7 +2,7 @@ window.addEventListener('load', dungeon);
 
 function dungeon() {
     var t = TermStart();
-    var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR', 'ANIMATOR'])
+    var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR', 'ANIMATOR', 'STACKED'])
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
     var keyFocus;
     var map;
@@ -25,7 +25,8 @@ function dungeon() {
     initLevel();
 
     preTurn();
-    redraw();
+    redraw(() => scrollBox());
+
 
     function initLevel() {
         t.HideCursor();
@@ -465,6 +466,7 @@ function dungeon() {
                 "Animate move",
                 "Toggle visual check",
                 "Forget visual state",
+                "Scroll Box",
                 "Radius 80",
                 "Radius 60",
                 "Radius 45",
@@ -496,9 +498,13 @@ function dungeon() {
                     forgetVisualState();
                     keyFocus = Focuses.PLAYER;
                 }
-
+                else if (optionIdx == 6) {
+                    scrollBox();
+                    keyFocus = Focuses.PLAYER;
+                    return;
+                }
                 else {
-                    var base = 6;
+                    var base = 7;
                     switch(optionIdx) {
                         case base+0: radius = 80; break;
                         case base+1: radius = 60; break;
@@ -568,7 +574,6 @@ function dungeon() {
     function forgetVisualState() {
         iterateOverMap((x,y) => {
             for (var obj of map.getAll([x,y])) {
-                console.log(obj);
                 obj.everInSight = false;
             }
         });
@@ -652,6 +657,62 @@ function dungeon() {
         
         if (canMove) {
             map.positions.move(newPos, ent);
+        }
+    }
+
+    function scrollBox() {
+        t.HoldFlush();
+        
+        var color = [term.WHITE, term.BLACK];
+        var title = " TITLE ";
+
+        var lines = [];
+        for (var i=0;i<15;i++) {
+            lines.push(`My line number is ${i} and that is it`);
+        }
+
+        var textBox = textRectFromLines(lines);
+
+        var box = vecAdd([2,2],[textBox[0], 10]);
+        var boxOffset = offsetToCenterBoxOnScreen(box);
+
+        t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
+        
+        var cursor = vecAdd(boxOffset,[1,1]);
+        t.SetCursorXY(cursor[0], cursor[1]);
+
+        var scrollOffset = 2;
+
+        var visibleLines = [];
+        for (var i=0;i<10;i++) {
+            visibleLines.push(lines[i+scrollOffset]);
+        }
+
+        printLineWithCursorAndColor(visibleLines, -1, color);
+        
+        var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
+        var scrollBarHeight = box[1]-2;
+
+        drawScrollBar(scrollBarPos, scrollBarHeight, 0, lines.length);
+
+        t.Flush();
+
+        function drawScrollBar(pos, height, topLineIndex, allLinesCount) {
+            if (height >= allLinesCount) {
+                return;
+            }
+
+            var visibleLinesCount  = height;
+            var barHeight = Math.floor(height * visibleLinesCount/allLinesCount);
+            var maxHeight = height - barHeight;
+            
+            var expectedPos = Math.floor(height* topLineIndex/allLinesCount);
+            var barPos = Math.max(0, Math.min(maxHeight, expectedPos));
+            
+            for (var i=barPos;i<barPos+barHeight;i++) {
+                t.SetCursorXY(pos[0], pos[1]+i);
+                t.Print(specialChars.LIGHTSHADE);
+            }
         }
     }
 
@@ -1096,7 +1157,7 @@ function dungeon() {
             [ boxWidth, messageRect[1] + optionsRect[1] ]
         );
 
-        var offset = vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
+        var offset = offsetToCenterBoxOnScreen(box);
         var paddedOptions = textPadWithSpaces(options, boxWidth);
 
         drawDialog();
@@ -1106,18 +1167,10 @@ function dungeon() {
             var cursor = vecAdd(offset,[2,1]);
             t.DrawBox(offset[0],offset[1],box[0],box[1],TermBorder(' '), color, title);
 
-            printLineWithCursorAndColor(messageLines, -1);
-            printLineWithCursorAndColor(paddedOptions, selectedOption);
+            t.SetCursorXY(cursor[0], cursor[1]);
+            printLineWithCursorAndColor(messageLines, -1, color);
+            printLineWithCursorAndColor(paddedOptions, selectedOption, color, selectedColor);
 
-            function printLineWithCursorAndColor(lines, selectIdx) {
-                for (var i=0;i<lines.length;i++) {
-                    var line = lines[i];
-                    t.SetCursorXY(cursor[0], cursor[1]);
-                    t.Print(line, selectIdx == i ? selectedColor : color);
-    
-                    ++cursor[1];
-                }
-            }
             t.Flush();
         }
 
@@ -1144,6 +1197,19 @@ function dungeon() {
             onOption(selectedOption);
         }
     } 
+
+    function printLineWithCursorAndColor(lines, selectIdx, color, selectedColor) {
+        var cursor = t.GetCursorXY();
+        for (var i=0;i<lines.length;i++) {
+            var line = lines[i];
+            t.SetCursorXY(cursor[0], cursor[1]);
+            t.Print(line, selectIdx == i ? selectedColor : color);
+
+            ++cursor[1];
+        }
+
+        t.SetCursorXY(cursor[0], cursor[1]);
+    }
 
     function rangedOption(val, range) {
         return (val + range) % range;
@@ -1254,6 +1320,10 @@ function dungeon() {
         for (var x=0;x<boundary[0];x++) {
             onCell(x,y);
         }   
+    }
+
+    function offsetToCenterBoxOnScreen(box) {
+        return vecApply(vecDivide(vecSubst([80,24], box), [2,2]), Math.floor);
     }
     
     function debugScan(cells, onCell) {
