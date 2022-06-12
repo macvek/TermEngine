@@ -410,20 +410,11 @@ function dungeon() {
     }
 
     function drawRing(center, radius) {
-        var topLeft = vecAdd(center, [-radius-1, -radius-1]);
-        var bottomRight = vecAdd(center, [radius+2, radius+2]);
-        var widthHeight = vecSubst(bottomRight, topLeft);
-        var N = null;
-
-        var border = [
-            'x','x','x',
-            'x', N ,'x',
-            'x','x','x'
-        ];
-
         ringScanCenterRadius(center, radius, (x,y) => {
-            t.SetCursorXY(x, y);
-            t.Print('x');
+            if (isPosVisible([x,y])) {
+                t.SetCursorXY(x, y);
+                t.Print('x');
+            }
         });
         
     }
@@ -758,25 +749,46 @@ function dungeon() {
     }
 
     function inSightCheck() {
-        var viewCheck = viewMap.newInstance(player.pos, blocksMapSight);
+        for (var cell of inSightCells(player.pos)) {
+            for (var obj of map.getAll(cell)) {
+                obj.inSight = true;
+                obj.everInSight = true;
+            }
+        }
+    }
+
+    function posListToBitmap(posList) {
+        var ret = [];
+        for (var pos of posList) {
+            if (!ret[pos[1]]) {
+                ret[pos[1]] = [];
+            }
+
+            ret[pos[1]][pos[0]] = 1;
+        }
+
+        return ret;
+    }
+
+    function inSightCells(viewPoint) {
+        var viewCheck = viewMap.newInstance(viewPoint, blocksMapSight);
         var radPoint = [radius,radius]
-        var center = vecSubst(player.pos, radPoint);
+        var center = vecSubst(viewPoint, radPoint);
         var max = [radius*2+1, radius*2+1];
 
-
+        var result = [];
         outboundSpiralScan(max, checkCell);
+
+        return result;
 
         function checkCell(aX,aY) {
             var pos = vecAdd([aX,aY], center);
             if (mapInBounds(pos) && viewCheck.test(pos)) {
-                for (obj of map.getAll(pos)) {
-                    obj.inSight = true;
-                    obj.everInSight = true;
-                }
+                result.push(pos);
             } 
         }
-        
     }
+
 
     function buildViewMap(radius) {
         var absoluteCenter = [radius,radius];
@@ -931,6 +943,11 @@ function dungeon() {
             }
         }
 
+    }
+
+    function isPosVisible(pos) {
+        var list = map.statics.get(pos);
+        return list.length > 0 && list[0].inSight;
     }
 
     function drawCursor() {
