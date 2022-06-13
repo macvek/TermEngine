@@ -25,7 +25,7 @@ function dungeon() {
     initLevel();
 
     preTurn();
-    redraw(() => scrollBox());
+    redraw(() => scrollBoxDemo());
 
 
     function initLevel() {
@@ -499,7 +499,7 @@ function dungeon() {
                     keyFocus = Focuses.PLAYER;
                 }
                 else if (optionIdx == 6) {
-                    scrollBox();
+                    scrollBoxDemo();
                     keyFocus = Focuses.PLAYER;
                     return;
                 }
@@ -660,33 +660,72 @@ function dungeon() {
         }
     }
 
-    function scrollBox() {
-        var wnd = new ScrollBox(10, 4, "A\nB\nC\nD\nE\nF\nG\nH");
-        t.HoldFlush();
+    function scrollBoxDemo() {
+        var prevFocus = keyFocus;
+        keyFocus += "-SCROLLDEMO";
+        var wnd = new ScrollBox(40, 10, 
+            "I'm a very long text\n"+
+            "With single line which is just too long to fit the screen so system must break it into few\n"+
+            "And there are lines hidden on the bottom"+
+            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"+
+            "EOF"
+        );
         wnd.scrollOffset = 0;
-        wnd.draw();
-        t.Flush();
+        window.addEventListener('keydown', onScrollKey);
+
+        drawScrollBox();
+
+        function onScrollKey(e) {
+            if ('Enter' === e.key) {
+                stopScrollBox();
+                return;
+            }
+            
+            if ("ArrowUp" === e.key) {
+                wnd.scrollOffset = Math.max(0, wnd.scrollOffset-1);
+            }
+            else if ("ArrowDown" === e.key) {
+                wnd.scrollOffset = Math.min(wnd.maxScrollHeight, wnd.scrollOffset+1);
+            }
+
+            drawScrollBox();
+        }
+
+        function drawScrollBox() {
+            t.HoldFlush();
+            wnd.draw();
+            t.Flush();
+        }
+
+        function stopScrollBox() {
+            keyFocus = prevFocus;
+            redraw();
+        }
        
 
     }
 
     function ScrollBox(wndWidth, wndHeight, text, title='', color=[term.LIGHTGRAY, term.BLACK], pos=null) {
         this.scrollOffset=0;
-
+       
         var lines = fillWithLineBreaks(text.split("\n"), wndWidth);
         
         var box = vecAdd([2,2],[wndWidth, wndHeight]);
         
         var scrollBarHeight = box[1]-2;
         var boxOffset = pos ? pos : offsetToCenterBoxOnScreen(box);
-        
+
+        var maxScrollHeight = lines.length-scrollBarHeight;
+        this.maxScrollHeight = maxScrollHeight;
+
+
         this.draw = function() {
             t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
             var cursor = vecAdd(boxOffset,[1,1]);
             t.SetCursorXY(cursor[0], cursor[1]);
 
             var visibleLines = [];
-            var scrollPos = Math.max(0, Math.min(this.scrollOffset, lines.length-scrollBarHeight));
+            var scrollPos = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
             var limit = scrollBarHeight+scrollPos;
             for (var i=scrollPos;i<limit;i++) {
                 visibleLines.push(lines[i]);
