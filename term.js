@@ -20,7 +20,9 @@ var specialChars = {
     MEDIUMSHADE:'▒',
     DARKSHADE:'▓',
     FULLBLOCK:'█',
-    LINEBREAK:'↓'
+    LINEBREAK:'↓',
+    ARROWUP:'↑',
+    ARROWDOWN:'↓'
 };
 
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 

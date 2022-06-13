@@ -734,9 +734,13 @@ function dungeon() {
             printLineWithCursorAndColor(visibleLines, -1, color);
             
             var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
+            var summaryPos = vecAdd(boxOffset, [1,box[1]-1]);
 
             drawScrollBar(scrollBarPos, scrollBarHeight, scrollPos, lines.length);
-
+            
+            t.SetCursorXY(summaryPos[0], summaryPos[1]);
+            printScrollSummary(wndWidth, this.scrollOffset, maxScrollHeight);
+            
             t.Flush();
         }
     }
@@ -1367,6 +1371,18 @@ function dungeon() {
             t.SetCursorXY(pos[0], pos[1]+i);
             t.Print(specialChars.LIGHTSHADE);
         }
+    }
+
+    function printScrollSummary(maxWidth, idx, maxIdx) {
+        var posPercent = Math.round(100 * idx/maxIdx);
+        
+        var arrows = [
+            posPercent < 100 ? specialChars.ARROWDOWN : ' ',
+            posPercent > 0 ? specialChars.ARROWUP : ' '
+        ].join("");
+
+        t.Print("UD XXX%".length > maxWidth ? arrows : arrows+" "+posPercent+"%");
+
     }
 
     function fillWithLineBreaks(lines, trimWidth) {
