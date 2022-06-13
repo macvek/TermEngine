@@ -25,7 +25,7 @@ function dungeon() {
     initLevel();
 
     preTurn();
-    redraw(() => scrollBoxDemo());
+    redraw();
 
 
     function initLevel() {
@@ -500,7 +500,6 @@ function dungeon() {
                 }
                 else if (optionIdx == 6) {
                     scrollBoxDemo();
-                    keyFocus = Focuses.PLAYER;
                     return;
                 }
                 else {
@@ -661,8 +660,7 @@ function dungeon() {
     }
 
     function scrollBoxDemo() {
-        var prevFocus = keyFocus;
-        keyFocus += "-SCROLLDEMO";
+        keyFocus = Focuses.STACKED;
         var wnd = new ScrollBox(40, 10, 
             "I'm a very long text\n"+
             "With single line which is just too long to fit the screen so system must break it into few\n"+
@@ -704,7 +702,8 @@ function dungeon() {
         }
 
         function stopScrollBox() {
-            keyFocus = prevFocus;
+            keyFocus = Focuses.PLAYER;
+            window.removeEventListener('keydown', onScrollKey);
             redraw();
         }
        
