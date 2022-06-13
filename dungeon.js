@@ -667,7 +667,7 @@ function dungeon() {
             "I'm a very long text\n"+
             "With single line which is just too long to fit the screen so system must break it into few\n"+
             "And there are lines hidden on the bottom"+
-            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"+
+            "\n\n\n\n\n\n\n\n\n\MIDDLE\n\n\n\n\n\n\n\n\n\n\n"+
             "EOF"
         );
         wnd.scrollOffset = 0;
@@ -682,10 +682,16 @@ function dungeon() {
             }
             
             if ("ArrowUp" === e.key) {
-                wnd.scrollOffset = Math.max(0, wnd.scrollOffset-1);
+                wnd.scrollUp();
             }
             else if ("ArrowDown" === e.key) {
-                wnd.scrollOffset = Math.min(wnd.maxScrollHeight, wnd.scrollOffset+1);
+                wnd.scrollDown();
+            }
+            else if ("PageUp" === e.key) {
+                wnd.pageUp();
+            }
+            else if ("PageDown" === e.key) {
+                wnd.pageDown();
             }
 
             drawScrollBox();
@@ -707,7 +713,7 @@ function dungeon() {
 
     function ScrollBox(wndWidth, wndHeight, text, title='', color=[term.LIGHTGRAY, term.BLACK], pos=null) {
         this.scrollOffset=0;
-       
+        var pageMove = wndHeight > 2 ? wndHeight-2 : 1;
         var lines = fillWithLineBreaks(text.split("\n"), wndWidth);
         
         var box = vecAdd([2,2],[wndWidth, wndHeight]);
@@ -716,8 +722,30 @@ function dungeon() {
         var boxOffset = pos ? pos : offsetToCenterBoxOnScreen(box);
 
         var maxScrollHeight = lines.length-scrollBarHeight;
-        this.maxScrollHeight = maxScrollHeight;
+        
+        this.scrollDown = function() {
+            ++this.scrollOffset;
+            this.boundScrollOffset();
+        }
 
+        this.scrollUp = function() {
+            --this.scrollOffset;
+            this.boundScrollOffset();
+        }
+
+        this.pageUp = function() {
+            this.scrollOffset -= pageMove;
+            this.boundScrollOffset();
+        }
+
+        this.pageDown = function() {
+            this.scrollOffset += pageMove;
+            this.boundScrollOffset();
+        }
+
+        this.boundScrollOffset = function() {
+            this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
+        }
 
         this.draw = function() {
             t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
