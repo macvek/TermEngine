@@ -44,6 +44,55 @@ function toAtoms(list) {
     return ret;
 }
 
+function indexedObjects() {
+    return {
+        rows: [],
+        getOne: function(pos) {
+            var ret = this.get(pos);
+            if (ret.length != 1) {
+                console.error("Expected one item", [pos, ret]);
+            }
+            return ret[0];
+        },
+        get: function(pos) {
+            var y = pos[1];
+            var x = pos[0];
+            if (this.rows[y] && this.rows[y][x]) {
+                return this.rows[y][x];
+            }
+            else {
+                return [];
+            }
+        },
+        put: function(pos,what) {
+            var y = pos[1];
+            var x = pos[0];
+            var row = this.rows[y];
+            if (!row) {
+                row = [];
+                this.rows[y] = row;
+            }
+
+            var col = row[x];
+            if (!col) {
+                col = [];
+                row[x] = col;
+            }
+
+            col.push(what);
+            what.pos = pos;
+        },
+        move: function(pos,what) {
+            this.remove(what);
+            this.put(pos, what);
+        },
+        remove: function(what) {
+            var list = this.get(what.pos);
+            arrayDrop(list, what);
+        }
+    }
+}
+
 function arrayDrop(arr, what) {
     var idx = arr.indexOf(what);
     if (idx > -1) {
