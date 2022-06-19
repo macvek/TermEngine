@@ -6,8 +6,7 @@ function dungeon() {
     var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
     var keyFocus;
     var map;
-
-    window.addEventListener('keydown', onPlayerMove);
+    
     var player;
     var cursorPos = null;
     var cursorSpaceBar=0;
@@ -21,6 +20,8 @@ function dungeon() {
     var unknownAsQuestionMark = false;
     var redrawTriggered = false;
     var postRedrawQueue = [];
+
+    window.addEventListener('keydown', mainKeyHandler);
 
     initLevel();
 
@@ -451,76 +452,77 @@ function dungeon() {
         }
     }
 
-    function onPlayerMove(e) {
+    function mainKeyHandler(e) {
         if (keyFocus != Focuses.PLAYER) return;
+        
         var vector = keyToVector(e);
         if (vector) {
             movePlayer(vector);
         }
         else if ('Enter' === e.key) {
-            keyFocus = Focuses.DIALOG;
-            var options = [
-                "Player",
-                "Cursor",
-                "Reset map",
-                "Animate move",
-                "Toggle visual check",
-                "Forget visual state",
-                "Scroll Box",
-                "Radius 80",
-                "Radius 60",
-                "Radius 45",
-                "Radius 30",
-                "Radius 10",
-                "Radius 5",
-                "Radius 3",
-            ];
+            showDemoDialog();
+        }   
+    }
 
-            showDialog("Switch mode", "", options, function(optionIdx) {
-                if (optionIdx == 0) {
-                    keyFocus = Focuses.PLAYER;
+    function showDemoDialog() {
+        keyFocus = Focuses.DIALOG;
+        var options = [
+            "Player",
+            "Cursor",
+            "Reset map",
+            "Toggle visual check",
+            "Forget visual state",
+            "Scroll Box",
+            "Radius 80",
+            "Radius 60",
+            "Radius 45",
+            "Radius 30",
+            "Radius 10",
+            "Radius 5",
+            "Radius 3",
+        ];
+
+        showDialog("Switch mode", "", options, function(optionIdx) {
+            if (optionIdx == 0) {
+                keyFocus = Focuses.PLAYER;
+            }
+            else if (optionIdx == 1) {
+                enterCursorMode();
+                return;
+            }
+            else if (optionIdx == 2) {
+                initLevel();
+            }
+            else if (optionIdx == 3) {
+                toggleVisCheck();
+                keyFocus = Focuses.PLAYER;
+            }
+            else if (optionIdx == 4) {
+                forgetVisualState();
+                keyFocus = Focuses.PLAYER;
+            }
+            else if (optionIdx == 5) {
+                scrollBoxDemo();
+                return;
+            }
+            else {
+                var base = 6;
+                switch(optionIdx) {
+                    case base+0: radius = 80; break;
+                    case base+1: radius = 60; break;
+                    case base+2: radius = 45; break;
+                    case base+3: radius = 30; break;
+                    case base+4: radius = 10; break;
+                    case base+5: radius = 5; break;
+                    case base+6: radius = 3; break;
                 }
-                else if (optionIdx == 1) {
-                    enterCursorMode();
-                    return;
-                }
-                else if (optionIdx == 2) {
-                    initLevel();
-                }
-                else if (optionIdx == 3) {
-                    animateMove();
-                }
-                else if (optionIdx == 4) {
-                    toggleVisCheck();
-                    keyFocus = Focuses.PLAYER;
-                }
-                else if (optionIdx == 5) {
-                    forgetVisualState();
-                    keyFocus = Focuses.PLAYER;
-                }
-                else if (optionIdx == 6) {
-                    scrollBoxDemo();
-                    return;
-                }
-                else {
-                    var base = 7;
-                    switch(optionIdx) {
-                        case base+0: radius = 80; break;
-                        case base+1: radius = 60; break;
-                        case base+2: radius = 45; break;
-                        case base+3: radius = 30; break;
-                        case base+4: radius = 10; break;
-                        case base+5: radius = 5; break;
-                        case base+6: radius = 3; break;
-                    }
-                    viewMap = buildViewMap(radius);
-                    keyFocus = Focuses.PLAYER;
-                }
-                
-                preTurn();
-                redraw();
-            }, 0);
-        }
+                viewMap = buildViewMap(radius);
+                keyFocus = Focuses.PLAYER;
+            }
+            
+            preTurn();
+            redraw();
+        }, 0);
     }
 
     function keyToVector(e) {
@@ -555,17 +557,6 @@ function dungeon() {
         return null;
     }
 
-    function animateMove() {
-        var moves = 80;
-        var animator = setInterval(function() {
-            movePlayer([1,0]);
-            if (--moves == 0) {
-                clearInterval(animator);
-                keyFocus = Focuses.PLAYER;
-            }
-        },10);
-    }
-
     function toggleVisCheck() {
         inSightTestEnabled = !inSightTestEnabled;
     }
@@ -577,7 +568,6 @@ function dungeon() {
             }
         });
     }
-
 
     function movePlayer(oxDiff) {
         var newPos = vecAdd(player.pos, oxDiff);
@@ -634,10 +624,9 @@ function dungeon() {
             return ActivateResults.STOP;
         }
 
-        var destSubjects = map.getAll(newPos);
         var canMove = true;
         var canAbort = true;
-        for (var subject of destSubjects) {
+        for (var subject of map.getAll(newPos)) {
             if (subject.onActivate) {
                 var activateResult = subject.onActivate(subject, ent);
                 if (canAbort && activateResult == ActivateResults.ABORT) {
@@ -710,74 +699,12 @@ function dungeon() {
 
     }
 
-    function ScrollBox(wndWidth, wndHeight, text, title='', color=[term.LIGHTGRAY, term.BLACK], pos=null) {
-        this.scrollOffset=0;
-        var pageMove = wndHeight > 2 ? wndHeight-2 : 1;
-        var lines = fillWithLineBreaks(text.split("\n"), wndWidth);
-        
-        var box = vecAdd([2,2],[wndWidth, wndHeight]);
-        
-        var scrollBarHeight = box[1]-2;
-        var boxOffset = pos ? pos : offsetToCenterBoxOnScreen(box);
-
-        var maxScrollHeight = lines.length-scrollBarHeight;
-        
-        this.scrollDown = function() {
-            ++this.scrollOffset;
-            this.boundScrollOffset();
-        }
-
-        this.scrollUp = function() {
-            --this.scrollOffset;
-            this.boundScrollOffset();
-        }
-
-        this.pageUp = function() {
-            this.scrollOffset -= pageMove;
-            this.boundScrollOffset();
-        }
-
-        this.pageDown = function() {
-            this.scrollOffset += pageMove;
-            this.boundScrollOffset();
-        }
-
-        this.boundScrollOffset = function() {
-            this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
-        }
-
-        this.draw = function() {
-            t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
-            var cursor = vecAdd(boxOffset,[1,1]);
-            t.SetCursorXY(cursor[0], cursor[1]);
-
-            var visibleLines = [];
-            var scrollPos = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
-            var limit = scrollBarHeight+scrollPos;
-            for (var i=scrollPos;i<limit;i++) {
-                visibleLines.push(lines[i]);
-            }
-
-            printLineWithCursorAndColor(visibleLines, -1, color);
-            
-            var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
-            var summaryPos = vecAdd(boxOffset, [1,box[1]-1]);
-
-            drawScrollBar(scrollBarPos, scrollBarHeight, scrollPos, lines.length);
-            
-            t.SetCursorXY(summaryPos[0], summaryPos[1]);
-            printScrollSummary(wndWidth, this.scrollOffset, maxScrollHeight);
-            
-            t.Flush();
-        }
-    }
-
     function preTurn() {
         performInSightValidation();
     }
 
     function nextTurn() {
-        var start = new Date().getTime();
+        var stamp = timestamp();
         preTurn();
         for (var each of map.objects) {
             if (each.onTurn) {
@@ -786,8 +713,16 @@ function dungeon() {
             }
         }
         redraw();
-        var done = new Date().getTime();
-        console.log ("turn took "+ ((done-start)/1000.0));
+        logTimestamps("Turn took", stamp);
+    }
+
+    function timestamp() {
+        return new Date().getTime();
+    }
+
+    function logTimestamps(prefix, start) {
+        var done = timestamp();
+        console.log (prefix +" "+ ((done-start)/1000.0));
     }
 
     function monsterTurn(ent) {
@@ -912,7 +847,6 @@ function dungeon() {
         }
     }
 
-
     function buildViewMap(radius) {
         var absoluteCenter = [radius,radius];
         var sideLen = radius*2 + 1;
@@ -977,9 +911,6 @@ function dungeon() {
         };
 
         return ret;
-
-        
-
     }
 
     function prep2DimArray(side, def) {
@@ -1099,13 +1030,6 @@ function dungeon() {
         function cellSummary(it) {
             var symbol = it.symbol ? it.symbol : 'None';
             return `${it.name} [${symbol}], W: ${0+it.blocksSight}`;
-        }
-    }
-
-    function clearConsole() {
-        t.SetCursorXY(1,24);
-        for (var i=0;i<24;i++) {
-            t.Println("");
         }
     }
 
@@ -1436,4 +1360,67 @@ function dungeon() {
             onCell(cell[0],cell[1]);
         }
     }
+
+    function ScrollBox(wndWidth, wndHeight, text, title='', color=[term.LIGHTGRAY, term.BLACK], pos=null) {
+        this.scrollOffset=0;
+        var pageMove = wndHeight > 2 ? wndHeight-2 : 1;
+        var lines = fillWithLineBreaks(text.split("\n"), wndWidth);
+        
+        var box = vecAdd([2,2],[wndWidth, wndHeight]);
+        
+        var scrollBarHeight = box[1]-2;
+        var boxOffset = pos ? pos : offsetToCenterBoxOnScreen(box);
+
+        var maxScrollHeight = lines.length-scrollBarHeight;
+        
+        this.scrollDown = function() {
+            ++this.scrollOffset;
+            this.boundScrollOffset();
+        }
+
+        this.scrollUp = function() {
+            --this.scrollOffset;
+            this.boundScrollOffset();
+        }
+
+        this.pageUp = function() {
+            this.scrollOffset -= pageMove;
+            this.boundScrollOffset();
+        }
+
+        this.pageDown = function() {
+            this.scrollOffset += pageMove;
+            this.boundScrollOffset();
+        }
+
+        this.boundScrollOffset = function() {
+            this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
+        }
+
+        this.draw = function() {
+            t.DrawBox(boxOffset[0],boxOffset[1],box[0],box[1],TermBorder(' '), color, title);
+            var cursor = vecAdd(boxOffset,[1,1]);
+            t.SetCursorXY(cursor[0], cursor[1]);
+
+            var visibleLines = [];
+            var scrollPos = Math.max(0, Math.min(this.scrollOffset, maxScrollHeight));
+            var limit = scrollBarHeight+scrollPos;
+            for (var i=scrollPos;i<limit;i++) {
+                visibleLines.push(lines[i]);
+            }
+
+            printLineWithCursorAndColor(visibleLines, -1, color);
+            
+            var scrollBarPos = vecAdd(boxOffset, [box[0]-1,1]);
+            var summaryPos = vecAdd(boxOffset, [1,box[1]-1]);
+
+            drawScrollBar(scrollBarPos, scrollBarHeight, scrollPos, lines.length);
+            
+            t.SetCursorXY(summaryPos[0], summaryPos[1]);
+            printScrollSummary(wndWidth, this.scrollOffset, maxScrollHeight);
+            
+            t.Flush();
+        }
+    }
+
 }
