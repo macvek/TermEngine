@@ -3,7 +3,7 @@ window.addEventListener('load', dungeon);
 function dungeon() {
     var t = TermStart();
     var Focuses = toAtoms(['PLAYER', 'DIALOG', 'CURSOR', 'ANIMATOR', 'STACKED'])
-    var ActivateResults = toAtoms(['MOVE','ABORT','STOP']);
+    var ActivateResults = toAtoms(['MOVE','ABORT','STOP', 'LOCATION']);
     var keyFocus;
     var map;
     
@@ -20,47 +20,25 @@ function dungeon() {
     var unknownAsQuestionMark = false;
     var redrawTriggered = false;
     var postRedrawQueue = [];
+    var nextLocation;
 
     window.addEventListener('keydown', mainKeyHandler);
 
-    initLevel();
+    systemInit();
+    loadLevel('main');
 
     preTurn();
     redraw();
 
-
-    function initLevel() {
+    function systemInit() {
         t.HideCursor();
-
         player = EntityPlayer();
+    }
+
+    function loadLevel(levelName) {
+        keyFocus = Focuses.PLAYER;
         map = initMap();
-        keyFocus = Focuses.PLAYER
-        drawOnMap([
-            "                                                                                ",
-            "        ########                                                                ",
-            "        #                                                                       ",
-            "        #     ##                                                                ",
-            "        #     #                       @                  S                      ",
-            "        #######                                                                 ",
-            "                                                                                ",
-            "                                                                                ",
-            "                                                                                ",
-            "                   ########## #####                                             ",
-            "                   #              #                                             ",
-            "                   #              #                                             ",
-            "                   #              #                                             ",
-            "                   ###### #########                                             ",
-            "                                                                                ",
-            "                                                                                ",
-            "                                                                                ",
-            "                                                                                ",
-            "                                                                                ",
-            "                                                                                ",
-            "        B                                              #########################",
-            "                                                       #      #                 ",
-            "                                                       #     #                  ",
-            "                                                       #    #                   ",
-        ]);
+        drawOnMap(DungeonDemoMaps(levelName));
     }
 
     function drawOnMap(lines) {
@@ -83,6 +61,18 @@ function dungeon() {
             }
             else if ("B" === chr) {
                 putEnt(EntityMonsterSpawn());
+            }
+            else if (specialChars.ARROWUP === chr) {
+                putEnt(EntityGoTo(chr, 'top'));
+            }
+            else if (specialChars.ARROWRIGHT === chr) {
+                putEnt(EntityGoTo(chr, 'right'));
+            }
+            else if (specialChars.ARROWDOWN === chr) {
+                putEnt(EntityGoTo(chr, 'main'));
+            }
+            else if (specialChars.ARROWLEFT === chr) {
+                putEnt(EntityGoTo(chr, 'main'));
             }
 
         }
@@ -146,6 +136,12 @@ function dungeon() {
 
     function EntityMonsterSpawn() {
         return dynamicObject(null, 'MonsterSpawn', activateMove, monsterSpawnTurn);
+    }
+
+    function EntityGoTo(symbol, destination) {
+        var goTo = dynamicObject(symbol, 'GoTo', activateGoTo);
+        goTo.destination = destination;
+        return goTo;
     }
 
     function dynamicObject(symbol, name, onActivate, onTurn) {
@@ -443,7 +439,7 @@ function dungeon() {
                 return;
             }
             else if (optionIdx == 2) {
-                initLevel();
+                systemInit();
             }
             else if (optionIdx == 3) {
                 toggleVisCheck();
@@ -523,10 +519,16 @@ function dungeon() {
 
     function movePlayer(oxDiff) {
         var newPos = vecAdd(player.pos, oxDiff);
-        
-        if (ActivateResults.ABORT === playerTurnMove(newPos)) {
+        var turnResult = playerTurnMove(newPos);
+        if ( ActivateResults.ABORT === turnResult) {
             return;
         }
+        
+        if (nextLocation) {
+            loadLevel(nextLocation);
+            nextLocation = null;
+        }
+        
         nextTurn();
     }
 
@@ -555,6 +557,16 @@ function dungeon() {
 
     function activateMove() {
         return ActivateResults.MOVE;
+    }
+
+    function activateGoTo(self, other) {
+        if (other === player) {
+            nextLocation = self.destination;
+            return ActivateResults.MOVE;
+        }
+        else {
+            return ActivateResults.STOP;
+        }
     }
 
     function randomMove(ent) {

@@ -22,7 +22,9 @@ var specialChars = {
     FULLBLOCK:'█',
     LINEBREAK:'↓',
     ARROWUP:'↑',
-    ARROWDOWN:'↓'
+    ARROWDOWN:'↓',
+    ARROWRIGHT:'→',
+    ARROWLEFT:'←'
 };
 
 var colors = [term.BLACK, term.GRAY, term.RED, term.LIGHTRED, term.GREEN, 
